@@ -5,6 +5,7 @@ import {
   useGetAllChecklists,
   useGetChecklistItems,
   useCreateChecklist,
+  useDeleteChecklist,
   useAddChecklistItems,
   useDeleteChecklistItems,
   useAssignDriver,
@@ -49,6 +50,14 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
         setNewChecklistName('');
+      },
+    },
+  });
+
+  const deleteChecklistMutation = useDeleteChecklist({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
       },
     },
   });
@@ -181,6 +190,13 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     });
   };
 
+  const handleDeleteChecklist = (e: React.MouseEvent, checklistId: number) => {
+    e.stopPropagation(); // Stop click from triggering card selection
+    if (window.confirm('Are you sure you want to delete this checklist?')) {
+      deleteChecklistMutation.mutate({ checklistId });
+    }
+  };
+
   const handleAddItem = () => {
     if (!selectedChecklistId || !selectedCoords || !newItemTitle) return;
 
@@ -235,30 +251,53 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
         <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Active Roster ({checklists.length})</h5>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {checklists.map((c: any) => (
-            <div
-              key={c.id}
-              onClick={() => setPanelState({ mode: 'CHECKLIST_EDIT', checklistId: c.id })}
-              style={{
-                padding: '12px',
-                backgroundColor: '#1e293b',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                border: '1px solid #334155',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <strong style={{ color: 'white', display: 'block' }}>{c.name}</strong>
-                <small style={{ color: '#94a3b8' }}>
-                  {c.driverId ? `Assigned to Driver #${c.driverId}` : 'Unassigned'}
-                </small>
+          {checklists.map((c: any) => {
+            const isDeleting =
+              deleteChecklistMutation.isPending &&
+              deleteChecklistMutation.variables?.checklistId === c.id;
+
+            return (
+              <div
+                key={c.id}
+                onClick={() => setPanelState({ mode: 'CHECKLIST_EDIT', checklistId: c.id })}
+                style={{
+                  padding: '12px',
+                  backgroundColor: '#1e293b',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  border: '1px solid #334155',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <div>
+                  <strong style={{ color: 'white', display: 'block' }}>{c.name}</strong>
+                  <small style={{ color: '#94a3b8' }}>
+                    {c.driverId ? `Assigned to Driver #${c.driverId}` : 'Unassigned'}
+                  </small>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <button
+                    onClick={(e) => handleDeleteChecklist(e, c.id)}
+                    disabled={deleteChecklistMutation.isPending}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                    }}
+                  >
+                    {isDeleting ? 'Deleting...' : 'Delete'}
+                  </button>
+                  <span style={{ color: '#0ea5e9' }}>Edit →</span>
+                </div>
               </div>
-              <span style={{ color: '#0ea5e9' }}>Edit →</span>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
