@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import Sidebar from './Sidebar';
+import Sidebar, { getDefaultStartDateTime, getCurrentEndDateTime } from './Sidebar';
 import TrackingMap from './TrackingMap';
 import AdminViews from './AdminViews';
 
@@ -8,7 +8,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [isLiveActive, setIsLiveActive] = useState(false);
-  const [dateRange, setDateRange] = useState({ start: '2026-06-25T08:00', end: '2026-06-25T17:00' });
+  
+  // Dynamically initialize with 2020-01-01 for start and current time for end
+  const [dateRange, setDateRange] = useState({
+    start: getDefaultStartDateTime(),
+    end: getCurrentEndDateTime(),
+  });
 
   const toggleUserSelection = (userId: number) => {
     const newSet = new Set(selectedUserIds);

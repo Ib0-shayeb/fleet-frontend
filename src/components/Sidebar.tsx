@@ -1,6 +1,20 @@
+import { useEffect } from 'react';
 import { useGetAllWorkers, useGetActiveDrivers } from '../api/generated';
 
 const PATH_COLORS = ['#0ea5e9', '#ef4444', '#10b981', '#f59e0b', '#a855f7', '#ec4899'];
+
+// Helper to format a JS Date object to YYYY-MM-DDTHH:mm for datetime-local input
+export const getDefaultStartDateTime = () => '2020-01-01T00:00';
+
+export const getCurrentEndDateTime = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 export default function Sidebar({
   isOpen,
@@ -13,6 +27,16 @@ export default function Sidebar({
 }: any) {
   const { data: allWorkers, isLoading } = useGetAllWorkers();
   const { data: activeUserIds } = useGetActiveDrivers();
+
+  // Populate default dates if dateRange starts empty
+  useEffect(() => {
+    if (!dateRange?.start || !dateRange?.end) {
+      setDateRange({
+        start: dateRange?.start || getDefaultStartDateTime(),
+        end: dateRange?.end || getCurrentEndDateTime(),
+      });
+    }
+  }, []);
 
   return (
     <div id="sidebar" className={isOpen ? '' : 'collapsed'}>
@@ -75,7 +99,7 @@ export default function Sidebar({
         <label>Start Time</label>
         <input
           type="datetime-local"
-          value={dateRange.start}
+          value={dateRange?.start || getDefaultStartDateTime()}
           onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
         />
       </div>
@@ -84,7 +108,7 @@ export default function Sidebar({
         <label>End Time</label>
         <input
           type="datetime-local"
-          value={dateRange.end}
+          value={dateRange?.end || getCurrentEndDateTime()}
           onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
         />
       </div>
