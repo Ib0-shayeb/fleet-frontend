@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useGetHistory, type DriverTripHistory } from '../api/generated';
 import { AXIOS_INSTANCE } from '../api/axios-instance';
 
@@ -33,13 +33,21 @@ export default function TrackingMap({ selectedUserIds, isLiveActive, dateRange }
     }
   }, []);
 
-  const startISO = formatIsoDate(dateRange.start);
-  let endISO = formatIsoDate(dateRange.end);
-  if (isLiveActive) {
-    const futureDate = new Date();
-    futureDate.setMinutes(futureDate.getMinutes() + 60);
-    endISO = futureDate.toISOString();
-  }
+  // Stabilize date calculations so React Query query keys remain constant
+  const { startISO, endISO } = useMemo(() => {
+    const start = formatIsoDate(dateRange.start);
+    let end = formatIsoDate(dateRange.end);
+
+    if (isLiveActive) {
+      // Round to top of next hour so string timestamp remains static across renders
+      const futureDate = new Date();
+      futureDate.setHours(futureDate.getHours() + 1);
+      futureDate.setMinutes(0, 0, 0);
+      end = futureDate.toISOString();
+    }
+
+    return { startISO: start, endISO: end };
+  }, [dateRange.start, dateRange.end, isLiveActive]);
 
   const { data: driverHistories, refetch } = useGetHistory(
     {
