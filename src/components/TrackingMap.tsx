@@ -9,6 +9,8 @@ interface TrackingMapProps {
     start: string;
     end: string;
   };
+  onMapLoaded: (map: google.maps.Map) => void;
+  onTripClick: (tripId: number) => void;
 }
 
 function formatIsoDate(localDateTimeValue: string): string {
@@ -17,7 +19,13 @@ function formatIsoDate(localDateTimeValue: string): string {
   return isNaN(d.getTime()) ? localDateTimeValue : d.toISOString();
 }
 
-export default function TrackingMap({ selectedUserIds, isLiveActive, dateRange }: TrackingMapProps) {
+export default function TrackingMap({
+  selectedUserIds,
+  isLiveActive,
+  dateRange,
+  onMapLoaded,
+  onTripClick,
+}: TrackingMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstance = useRef<google.maps.Map | null>(null);
   const polylines = useRef<google.maps.Polyline[]>([]);
@@ -30,16 +38,15 @@ export default function TrackingMap({ selectedUserIds, isLiveActive, dateRange }
         center: { lat: 31.9522, lng: 35.915 },
         zoom: 13,
       });
+      onMapLoaded(mapInstance.current);
     }
-  }, []);
+  }, [onMapLoaded]);
 
-  // Stabilize date calculations so React Query query keys remain constant
   const { startISO, endISO } = useMemo(() => {
     const start = formatIsoDate(dateRange.start);
     let end = formatIsoDate(dateRange.end);
 
     if (isLiveActive) {
-      // Round to top of next hour so string timestamp remains static across renders
       const futureDate = new Date();
       futureDate.setHours(futureDate.getHours() + 1);
       futureDate.setMinutes(0, 0, 0);
@@ -76,12 +83,14 @@ export default function TrackingMap({ selectedUserIds, isLiveActive, dateRange }
         if (!eventSources.current.has(userId)) {
           const token = localStorage.getItem('token');
           const baseURL = AXIOS_INSTANCE.defaults.baseURL || '';
-          const streamUrl = `${baseURL}/api/manager/locations/stream?userId=${userId}${token ? `&token=${encodeURIComponent(token)}` : ''}`;
+          const streamUrl = `${baseURL}/api/manager/locations/stream?userId=${userId}${
+            token ? `&token=${encodeURIComponent(token)}` : ''
+          }`;
 
           const source = new EventSource(streamUrl);
 
           source.addEventListener('location-update', () => {
-            refetch(); 
+            refetch();
           });
 
           eventSources.current.set(userId, source);
@@ -137,20 +146,13 @@ export default function TrackingMap({ selectedUserIds, isLiveActive, dateRange }
           strokeOpacity: 0.85,
           strokeWeight: 5,
         });
+
+        polyline.addListener('click', () => {
+          if (trip.tripId) onTripClick(trip.tripId);
+        });
+
         polyline.setMap(mapInstance.current);
         polylines.current.push(polyline);
-
-        const startMarker = new window.google.maps.Marker({
-          position: path[0],
-          map: mapInstance.current,
-          title: `Trip #${trip.tripId} Start`,
-        });
-        const endMarker = new window.google.maps.Marker({
-          position: path[path.length - 1],
-          map: mapInstance.current,
-          title: `Trip #${trip.tripId} End`,
-        });
-        markers.current.push(startMarker, endMarker);
       });
     });
 

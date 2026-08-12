@@ -1,0 +1,388 @@
+import { useState, useEffect, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
+  useGetAllWorkers,
+  useGetAllChecklists,
+  useGetChecklistItems,
+  useCreateChecklist,
+  useAddChecklistItems,
+  useDeleteChecklistItems,
+  useAssignDriver,
+  getGetAllChecklistsQueryKey,
+  getGetChecklistItemsQueryKey,
+} from '../api/generated';
+import type { RightPanelState } from '../types';
+
+interface ChecklistItem {
+  id?: number;
+  checklistId?: number;
+  title: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface Props {
+  panelState: RightPanelState;
+  setPanelState: (state: RightPanelState) => void;
+  mapInstance: google.maps.Map | null;
+}
+
+export default function ChecklistManager({ panelState, setPanelState, mapInstance }: Props) {
+  const queryClient = useQueryClient();
+
+  // 1. Generated Query Hooks
+  const { data: workers } = useGetAllWorkers();
+  const { data: checklists = [] } = useGetAllChecklists();
+
+  const selectedChecklistId = panelState.mode === 'CHECKLIST_EDIT' ? panelState.checklistId : null;
+  const selectedChecklist = checklists.find((c: any) => c.id === selectedChecklistId) || null;
+
+  const { data: items = [] } = useGetChecklistItems(selectedChecklistId || 0, {
+    query: {
+      enabled: !!selectedChecklistId,
+    },
+  });
+
+  // 2. Generated Mutation Hooks
+  const createChecklistMutation = useCreateChecklist({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+        setNewChecklistName('');
+      },
+    },
+  });
+
+  const addItemsMutation = useAddChecklistItems({
+    mutation: {
+      onSuccess: () => {
+        if (selectedChecklistId) {
+          queryClient.invalidateQueries({
+            queryKey: getGetChecklistItemsQueryKey(selectedChecklistId),
+          });
+        }
+        setNewItemTitle('');
+        setSelectedCoords(null);
+      },
+    },
+  });
+
+  const deleteItemMutation = useDeleteChecklistItems({
+    mutation: {
+      onSuccess: () => {
+        if (selectedChecklistId) {
+          queryClient.invalidateQueries({
+            queryKey: getGetChecklistItemsQueryKey(selectedChecklistId),
+          });
+        }
+      },
+    },
+  });
+
+  const assignDriverMutation = useAssignDriver({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+      },
+    },
+  });
+
+  // Form & Location State
+  const [newChecklistName, setNewChecklistName] = useState('');
+  const [isMapPickActive, setIsMapPickActive] = useState(false);
+  const [newItemTitle, setNewItemTitle] = useState('');
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const autocompleteRef = useRef<HTMLInputElement>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+
+  // Update map markers when items change
+  useEffect(() => {
+    if (panelState.mode === 'CHECKLIST_EDIT' && items) {
+      renderMapMarkers(items);
+    } else {
+      clearMapMarkers();
+    }
+  }, [items, panelState.mode]);
+
+  // Google Places Autocomplete Setup
+  useEffect(() => {
+    if (panelState.mode === 'CHECKLIST_EDIT' && autocompleteRef.current && window.google?.maps?.places) {
+      const autocomplete = new window.google.maps.places.Autocomplete(autocompleteRef.current);
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          setSelectedCoords({ lat, lng });
+          setNewItemTitle(place.name || place.formatted_address || 'Selected Location');
+
+          if (mapInstance) {
+            mapInstance.panTo({ lat, lng });
+            mapInstance.setZoom(15);
+          }
+        }
+      });
+    }
+  }, [panelState.mode, mapInstance]);
+
+  // Click on Map Listener to Select Waypoint
+  useEffect(() => {
+    if (!mapInstance || !isMapPickActive || panelState.mode !== 'CHECKLIST_EDIT') return;
+
+    const listener = mapInstance.addListener('click', (e: google.maps.MapMouseEvent) => {
+      if (e.latLng) {
+        const lat = e.latLng.lat();
+        const lng = e.latLng.lng();
+        setSelectedCoords({ lat, lng });
+        setNewItemTitle(`Waypoint (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
+        setIsMapPickActive(false);
+      }
+    });
+
+    return () => {
+      window.google.maps.event.removeListener(listener);
+    };
+  }, [mapInstance, isMapPickActive, panelState.mode]);
+
+  const clearMapMarkers = () => {
+    markersRef.current.forEach((m) => m.setMap(null));
+    markersRef.current = [];
+  };
+
+  const renderMapMarkers = (checklistItems: ChecklistItem[]) => {
+    clearMapMarkers();
+    if (!mapInstance) return;
+
+    const bounds = new window.google.maps.LatLngBounds();
+
+    checklistItems.forEach((item, idx) => {
+      const marker = new window.google.maps.Marker({
+        position: { lat: item.latitude, lng: item.longitude },
+        map: mapInstance,
+        label: `${idx + 1}`,
+        title: item.title,
+      });
+
+      bounds.extend({ lat: item.latitude, lng: item.longitude });
+      markersRef.current.push(marker);
+    });
+
+    if (checklistItems.length > 0) {
+      mapInstance.fitBounds(bounds);
+    }
+  };
+
+  const handleCreateChecklist = () => {
+    if (!newChecklistName.trim()) return;
+  
+    createChecklistMutation.mutate({ 
+      params: { name: newChecklistName } 
+    });
+  };
+
+  const handleAddItem = () => {
+    if (!selectedChecklistId || !selectedCoords || !newItemTitle) return;
+
+    const newItem = {
+      title: newItemTitle,
+      latitude: selectedCoords.lat,
+      longitude: selectedCoords.lng,
+    };
+
+    addItemsMutation.mutate({
+      checklistId: selectedChecklistId,
+      data: [newItem],
+    });
+  };
+
+  const handleDeleteItem = (itemId: number) => {
+    if (!selectedChecklistId) return;
+    deleteItemMutation.mutate({
+      checklistId: selectedChecklistId,
+      itemId,
+    });
+  };
+
+  const handleAssignDriver = (driverId: number) => {
+    if (!selectedChecklistId) return;
+    assignDriverMutation.mutate({
+      checklistId: selectedChecklistId,
+      driverId,
+    });
+  };
+
+  // View 1: List All Checklists
+  if (panelState.mode === 'CHECKLIST_LIST') {
+    return (
+      <div>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <input
+            type="text"
+            placeholder="New checklist name..."
+            value={newChecklistName}
+            onChange={(e) => setNewChecklistName(e.target.value)}
+            style={{ flexGrow: 1 }}
+          />
+          <button
+            className="action-btn"
+            onClick={handleCreateChecklist}
+            disabled={createChecklistMutation.isPending}
+          >
+            {createChecklistMutation.isPending ? 'Creating...' : 'Create'}
+          </button>
+        </div>
+
+        <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Active Roster ({checklists.length})</h5>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {checklists.map((c: any) => (
+            <div
+              key={c.id}
+              onClick={() => setPanelState({ mode: 'CHECKLIST_EDIT', checklistId: c.id })}
+              style={{
+                padding: '12px',
+                backgroundColor: '#1e293b',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                border: '1px solid #334155',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <div>
+                <strong style={{ color: 'white', display: 'block' }}>{c.name}</strong>
+                <small style={{ color: '#94a3b8' }}>
+                  {c.driverId ? `Assigned to Driver #${c.driverId}` : 'Unassigned'}
+                </small>
+              </div>
+              <span style={{ color: '#0ea5e9' }}>Edit →</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // View 2: Edit Checklist Waypoints
+  return (
+    <div>
+      <button
+        onClick={() => setPanelState({ mode: 'CHECKLIST_LIST' })}
+        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '12px' }}
+      >
+        ← Back to all checklists
+      </button>
+
+      {selectedChecklist && (
+        <>
+          <h4 style={{ margin: '0 0 12px 0', color: 'white' }}>{selectedChecklist.name}</h4>
+
+          <div className="form-group" style={{ marginBottom: '16px' }}>
+            <label>Assigned Driver</label>
+            <select
+              value={selectedChecklist.driverId || ''}
+              onChange={(e) => handleAssignDriver(Number(e.target.value))}
+              disabled={assignDriverMutation.isPending}
+            >
+              <option value="">-- Unassigned --</option>
+              {workers?.map((w: any) => (
+                <option key={w.id} value={w.id}>
+                  {w.name} (ID: {w.id})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div style={{ backgroundColor: '#1e293b', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
+              Search Place or Address
+            </label>
+            <input
+              ref={autocompleteRef}
+              type="text"
+              placeholder="Search Google Places..."
+              style={{ width: '100%', marginBottom: '10px' }}
+            />
+
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
+              <button
+                className="action-btn"
+                style={{ backgroundColor: isMapPickActive ? '#ef4444' : '#3b82f6', fontSize: '12px' }}
+                onClick={() => setIsMapPickActive(!isMapPickActive)}
+              >
+                {isMapPickActive ? 'Click Map Spot...' : '📍 Pick Spot on Map'}
+              </button>
+              {selectedCoords && (
+                <span style={{ fontSize: '11px', color: '#22c55e' }}>
+                  {selectedCoords.lat.toFixed(3)}, {selectedCoords.lng.toFixed(3)}
+                </span>
+              )}
+            </div>
+
+            <input
+              type="text"
+              placeholder="Waypoint Name / Title"
+              value={newItemTitle}
+              onChange={(e) => setNewItemTitle(e.target.value)}
+              style={{ width: '100%', marginBottom: '10px' }}
+            />
+
+            <button
+              className="action-btn"
+              style={{ width: '100%', backgroundColor: '#10b981' }}
+              onClick={handleAddItem}
+              disabled={!selectedCoords || !newItemTitle || addItemsMutation.isPending}
+            >
+              {addItemsMutation.isPending ? 'Adding...' : 'Add Waypoint Item'}
+            </button>
+          </div>
+
+          <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Checklist Waypoints ({items.length})</h5>
+          <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+            {items.map((item: any, idx: number) => (
+              <div
+                key={item.id || idx}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '8px 12px',
+                  backgroundColor: '#0f172a',
+                  marginBottom: '6px',
+                  borderRadius: '4px',
+                }}
+              >
+                <div>
+                  <strong style={{ color: 'white', fontSize: '13px' }}>
+                    {idx + 1}. {item.title}
+                  </strong>
+                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                    {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                  </div>
+                </div>
+                {item.id && (
+                  <button
+                    onClick={() => handleDeleteItem(item.id)}
+                    disabled={deleteItemMutation.isPending}
+                    style={{
+                      backgroundColor: '#ef4444',
+                      color: 'white',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                    }}
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

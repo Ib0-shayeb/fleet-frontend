@@ -24,6 +24,15 @@ import type {
 } from '@tanstack/react-query';
 
 import { customInstance } from './axios-instance';
+export interface ChecklistItem {
+  id?: number;
+  checklistId?: number;
+  googlePlaceId?: string;
+  addedById?: number;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface LocationLog {
   id?: number;
   tripId?: number;
@@ -63,15 +72,38 @@ export interface User {
   passwordHash?: string;
 }
 
+export interface Checklist {
+  id?: number;
+  name?: string;
+  fleetId?: number;
+  driverId?: number;
+}
+
 export type RegisterWorkerBody = {[key: string]: string};
 
 export type RegisterWorker200 = { [key: string]: unknown };
+
+export type CreateChecklistParams = {
+name: string;
+};
+
+export type CreateChecklist200 = { [key: string]: unknown };
+
+export type DeleteChecklistItems200 = { [key: string]: unknown };
+
+export type AssignDriver200 = { [key: string]: unknown };
+
+export type AddChecklistItems200 = { [key: string]: unknown };
 
 export type StartTrip200 = { [key: string]: unknown };
 
 export type LogLocation200 = { [key: string]: unknown };
 
 export type EndTrip200 = { [key: string]: unknown };
+
+export type DeleteChecklistItems1200 = { [key: string]: unknown };
+
+export type AddChecklistItems1200 = { [key: string]: unknown };
 
 export type LogLocationBatch200 = { [key: string]: unknown };
 
@@ -142,6 +174,240 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getRegisterWorkerMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+export const createChecklist = (
+    params: CreateChecklistParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<CreateChecklist200>(
+      {url: `/api/manager/locations/create-checklist`, method: 'POST',
+        params, signal
+    },
+      );
+    }
+  
+
+
+export const getCreateChecklistMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChecklist>>, TError,{params: CreateChecklistParams}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createChecklist>>, TError,{params: CreateChecklistParams}, TContext> => {
+
+const mutationKey = ['createChecklist'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createChecklist>>, {params: CreateChecklistParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  createChecklist(params,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateChecklistMutationResult = NonNullable<Awaited<ReturnType<typeof createChecklist>>>
+    
+    export type CreateChecklistMutationError = unknown
+
+    export const useCreateChecklist = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createChecklist>>, TError,{params: CreateChecklistParams}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createChecklist>>,
+        TError,
+        {params: CreateChecklistParams},
+        TContext
+      > => {
+
+      const mutationOptions = getCreateChecklistMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+export const deleteChecklistItems = (
+    checklistId: number,
+    itemId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<DeleteChecklistItems200>(
+      {url: `/api/manager/locations/checklist/${checklistId}/delete-item/${itemId}`, method: 'DELETE', signal
+    },
+      );
+    }
+  
+
+
+export const getDeleteChecklistItemsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext> => {
+
+const mutationKey = ['deleteChecklistItems'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChecklistItems>>, {checklistId: number;itemId: number}> = (props) => {
+          const {checklistId,itemId} = props ?? {};
+
+          return  deleteChecklistItems(checklistId,itemId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteChecklistItemsMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChecklistItems>>>
+    
+    export type DeleteChecklistItemsMutationError = unknown
+
+    export const useDeleteChecklistItems = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteChecklistItems>>,
+        TError,
+        {checklistId: number;itemId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteChecklistItemsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+export const assignDriver = (
+    checklistId: number,
+    driverId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AssignDriver200>(
+      {url: `/api/manager/locations/checklist/${checklistId}/assign-driver/${driverId}`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getAssignDriverMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignDriver>>, TError,{checklistId: number;driverId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof assignDriver>>, TError,{checklistId: number;driverId: number}, TContext> => {
+
+const mutationKey = ['assignDriver'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof assignDriver>>, {checklistId: number;driverId: number}> = (props) => {
+          const {checklistId,driverId} = props ?? {};
+
+          return  assignDriver(checklistId,driverId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AssignDriverMutationResult = NonNullable<Awaited<ReturnType<typeof assignDriver>>>
+    
+    export type AssignDriverMutationError = unknown
+
+    export const useAssignDriver = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof assignDriver>>, TError,{checklistId: number;driverId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof assignDriver>>,
+        TError,
+        {checklistId: number;driverId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getAssignDriverMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+export const addChecklistItems = (
+    checklistId: number,
+    checklistItem: ChecklistItem[],
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AddChecklistItems200>(
+      {url: `/api/manager/locations/checklist/${checklistId}/add-items`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: checklistItem, signal
+    },
+      );
+    }
+  
+
+
+export const getAddChecklistItemsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addChecklistItems>>, TError,{checklistId: number;data: ChecklistItem[]}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof addChecklistItems>>, TError,{checklistId: number;data: ChecklistItem[]}, TContext> => {
+
+const mutationKey = ['addChecklistItems'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addChecklistItems>>, {checklistId: number;data: ChecklistItem[]}> = (props) => {
+          const {checklistId,data} = props ?? {};
+
+          return  addChecklistItems(checklistId,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddChecklistItemsMutationResult = NonNullable<Awaited<ReturnType<typeof addChecklistItems>>>
+    export type AddChecklistItemsMutationBody = ChecklistItem[]
+    export type AddChecklistItemsMutationError = unknown
+
+    export const useAddChecklistItems = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addChecklistItems>>, TError,{checklistId: number;data: ChecklistItem[]}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addChecklistItems>>,
+        TError,
+        {checklistId: number;data: ChecklistItem[]},
+        TContext
+      > => {
+
+      const mutationOptions = getAddChecklistItemsMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -315,6 +581,124 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getEndTripMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+export const deleteChecklistItems1 = (
+    checklistId: number,
+    itemId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<DeleteChecklistItems1200>(
+      {url: `/api/driver/locations/checklist/${checklistId}/delete-item/${itemId}`, method: 'POST', signal
+    },
+      );
+    }
+  
+
+
+export const getDeleteChecklistItems1MutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems1>>, TError,{checklistId: number;itemId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems1>>, TError,{checklistId: number;itemId: number}, TContext> => {
+
+const mutationKey = ['deleteChecklistItems1'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChecklistItems1>>, {checklistId: number;itemId: number}> = (props) => {
+          const {checklistId,itemId} = props ?? {};
+
+          return  deleteChecklistItems1(checklistId,itemId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteChecklistItems1MutationResult = NonNullable<Awaited<ReturnType<typeof deleteChecklistItems1>>>
+    
+    export type DeleteChecklistItems1MutationError = unknown
+
+    export const useDeleteChecklistItems1 = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems1>>, TError,{checklistId: number;itemId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteChecklistItems1>>,
+        TError,
+        {checklistId: number;itemId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteChecklistItems1MutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
+export const addChecklistItems1 = (
+    checklistId: number,
+    checklistItem: ChecklistItem[],
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<AddChecklistItems1200>(
+      {url: `/api/driver/locations/checklist/${checklistId}/add-items`, method: 'POST',
+      headers: {'Content-Type': 'application/json', },
+      data: checklistItem, signal
+    },
+      );
+    }
+  
+
+
+export const getAddChecklistItems1MutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addChecklistItems1>>, TError,{checklistId: number;data: ChecklistItem[]}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof addChecklistItems1>>, TError,{checklistId: number;data: ChecklistItem[]}, TContext> => {
+
+const mutationKey = ['addChecklistItems1'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addChecklistItems1>>, {checklistId: number;data: ChecklistItem[]}> = (props) => {
+          const {checklistId,data} = props ?? {};
+
+          return  addChecklistItems1(checklistId,data,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddChecklistItems1MutationResult = NonNullable<Awaited<ReturnType<typeof addChecklistItems1>>>
+    export type AddChecklistItems1MutationBody = ChecklistItem[]
+    export type AddChecklistItems1MutationError = unknown
+
+    export const useAddChecklistItems1 = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addChecklistItems1>>, TError,{checklistId: number;data: ChecklistItem[]}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof addChecklistItems1>>,
+        TError,
+        {checklistId: number;data: ChecklistItem[]},
+        TContext
+      > => {
+
+      const mutationOptions = getAddChecklistItems1MutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -697,6 +1081,92 @@ export function useHello<TData = Awaited<ReturnType<typeof hello>>, TError = unk
 
 
 
+export const getChecklistItems = (
+    checklistId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ChecklistItem[]>(
+      {url: `/api/manager/locations/checklist/${checklistId}/items`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetChecklistItemsQueryKey = (checklistId?: number,) => {
+    return [
+    `/api/manager/locations/checklist/${checklistId}/items`
+    ] as const;
+    }
+
+    
+export const getGetChecklistItemsQueryOptions = <TData = Awaited<ReturnType<typeof getChecklistItems>>, TError = unknown>(checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChecklistItems>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetChecklistItemsQueryKey(checklistId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getChecklistItems>>> = ({ signal }) => getChecklistItems(checklistId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(checklistId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getChecklistItems>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetChecklistItemsQueryResult = NonNullable<Awaited<ReturnType<typeof getChecklistItems>>>
+export type GetChecklistItemsQueryError = unknown
+
+
+export function useGetChecklistItems<TData = Awaited<ReturnType<typeof getChecklistItems>>, TError = unknown>(
+ checklistId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChecklistItems>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getChecklistItems>>,
+          TError,
+          Awaited<ReturnType<typeof getChecklistItems>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChecklistItems<TData = Awaited<ReturnType<typeof getChecklistItems>>, TError = unknown>(
+ checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChecklistItems>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getChecklistItems>>,
+          TError,
+          Awaited<ReturnType<typeof getChecklistItems>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetChecklistItems<TData = Awaited<ReturnType<typeof getChecklistItems>>, TError = unknown>(
+ checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChecklistItems>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetChecklistItems<TData = Awaited<ReturnType<typeof getChecklistItems>>, TError = unknown>(
+ checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getChecklistItems>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetChecklistItemsQueryOptions(checklistId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
 export const getAllWorkers = (
     
  signal?: AbortSignal
@@ -772,6 +1242,92 @@ export function useGetAllWorkers<TData = Awaited<ReturnType<typeof getAllWorkers
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getGetAllWorkersQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const getAllChecklists = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<Checklist[]>(
+      {url: `/api/manager/locations/all-checklists`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetAllChecklistsQueryKey = () => {
+    return [
+    `/api/manager/locations/all-checklists`
+    ] as const;
+    }
+
+    
+export const getGetAllChecklistsQueryOptions = <TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAllChecklistsQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllChecklists>>> = ({ signal }) => getAllChecklists(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAllChecklistsQueryResult = NonNullable<Awaited<ReturnType<typeof getAllChecklists>>>
+export type GetAllChecklistsQueryError = unknown
+
+
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAllChecklists>>,
+          TError,
+          Awaited<ReturnType<typeof getAllChecklists>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAllChecklists>>,
+          TError,
+          Awaited<ReturnType<typeof getAllChecklists>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAllChecklistsQueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
@@ -944,6 +1500,178 @@ export function useHello1<TData = Awaited<ReturnType<typeof hello1>>, TError = u
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getHello1QueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const assignedChecklist = (
+    
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<Checklist[]>(
+      {url: `/api/driver/locations/assigned-checklists`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getAssignedChecklistQueryKey = () => {
+    return [
+    `/api/driver/locations/assigned-checklists`
+    ] as const;
+    }
+
+    
+export const getAssignedChecklistQueryOptions = <TData = Awaited<ReturnType<typeof assignedChecklist>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAssignedChecklistQueryKey();
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof assignedChecklist>>> = ({ signal }) => assignedChecklist(signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AssignedChecklistQueryResult = NonNullable<Awaited<ReturnType<typeof assignedChecklist>>>
+export type AssignedChecklistQueryError = unknown
+
+
+export function useAssignedChecklist<TData = Awaited<ReturnType<typeof assignedChecklist>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof assignedChecklist>>,
+          TError,
+          Awaited<ReturnType<typeof assignedChecklist>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAssignedChecklist<TData = Awaited<ReturnType<typeof assignedChecklist>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof assignedChecklist>>,
+          TError,
+          Awaited<ReturnType<typeof assignedChecklist>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAssignedChecklist<TData = Awaited<ReturnType<typeof assignedChecklist>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useAssignedChecklist<TData = Awaited<ReturnType<typeof assignedChecklist>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAssignedChecklistQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
+export const assignedChecklist1 = (
+    checklistId: number,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ChecklistItem[]>(
+      {url: `/api/driver/locations/assigned-checklists/${checklistId}`, method: 'GET', signal
+    },
+      );
+    }
+  
+
+
+
+export const getAssignedChecklist1QueryKey = (checklistId?: number,) => {
+    return [
+    `/api/driver/locations/assigned-checklists/${checklistId}`
+    ] as const;
+    }
+
+    
+export const getAssignedChecklist1QueryOptions = <TData = Awaited<ReturnType<typeof assignedChecklist1>>, TError = unknown>(checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist1>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getAssignedChecklist1QueryKey(checklistId);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof assignedChecklist1>>> = ({ signal }) => assignedChecklist1(checklistId, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, enabled: !!(checklistId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist1>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type AssignedChecklist1QueryResult = NonNullable<Awaited<ReturnType<typeof assignedChecklist1>>>
+export type AssignedChecklist1QueryError = unknown
+
+
+export function useAssignedChecklist1<TData = Awaited<ReturnType<typeof assignedChecklist1>>, TError = unknown>(
+ checklistId: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist1>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof assignedChecklist1>>,
+          TError,
+          Awaited<ReturnType<typeof assignedChecklist1>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAssignedChecklist1<TData = Awaited<ReturnType<typeof assignedChecklist1>>, TError = unknown>(
+ checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist1>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof assignedChecklist1>>,
+          TError,
+          Awaited<ReturnType<typeof assignedChecklist1>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useAssignedChecklist1<TData = Awaited<ReturnType<typeof assignedChecklist1>>, TError = unknown>(
+ checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist1>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useAssignedChecklist1<TData = Awaited<ReturnType<typeof assignedChecklist1>>, TError = unknown>(
+ checklistId: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof assignedChecklist1>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getAssignedChecklist1QueryOptions(checklistId,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
