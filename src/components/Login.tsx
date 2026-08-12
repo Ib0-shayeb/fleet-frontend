@@ -8,8 +8,10 @@ export default function Login({ onLoginSuccess }: { onLoginSuccess: () => void }
   const loginMutation = useLogin({
     mutation: {
       onSuccess: (data) => {
-        if (data?.token) {
-          localStorage.setItem('token', data.token);
+        // Cast generated object to access token safely for TypeScript compiler
+        const res = data as { token?: string };
+        if (res?.token) {
+          localStorage.setItem('token', res.token);
           onLoginSuccess();
         }
       },

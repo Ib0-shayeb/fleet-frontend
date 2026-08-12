@@ -4,7 +4,7 @@ export const AXIOS_INSTANCE = axios.create({
   baseURL: 'https://distribution-backend-ywul.onrender.com',
 });
 
-export const customInstance = (config: AxiosRequestConfig): Promise => {
+export const customInstance = <T>(config: AxiosRequestConfig): Promise<T> => {
   const token = localStorage.getItem('token');
   if (token) {
     config.headers = {
