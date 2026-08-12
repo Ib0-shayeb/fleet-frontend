@@ -1,7 +1,7 @@
 import axios, { type AxiosRequestConfig } from 'axios';
 
 export const AXIOS_INSTANCE = axios.create({
-  baseURL: 'https://distribution-backend-ywul.onrender.com',
+  baseURL: 'http://localhost:8080',
 });
 
 export const customInstance = (config: AxiosRequestConfig): Promise => {
