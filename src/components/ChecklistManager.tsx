@@ -14,10 +14,11 @@ import {
 } from '../api/generated';
 import type { RightPanelState } from '../types';
 
+// Updated interface: Changed 'title' to 'name' to match backend
 interface ChecklistItem {
   id?: number;
   checklistId?: number;
-  title: string;
+  name: string;
   latitude: number;
   longitude: number;
 }
@@ -108,7 +109,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   // Update map markers when items change
   useEffect(() => {
     if (panelState.mode === 'CHECKLIST_EDIT' && items) {
-      renderMapMarkers(items);
+      renderMapMarkers(items as unknown as ChecklistItem[]);
     } else {
       clearMapMarkers();
     }
@@ -170,7 +171,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         position: { lat: item.latitude, lng: item.longitude },
         map: mapInstance,
         label: `${idx + 1}`,
-        title: item.title,
+        title: item.name, // Map hover title uses item.name
       });
 
       bounds.extend({ lat: item.latitude, lng: item.longitude });
@@ -191,7 +192,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   };
 
   const handleDeleteChecklist = (e: React.MouseEvent, checklistId: number) => {
-    e.stopPropagation(); // Stop click from triggering card selection
+    e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this checklist?')) {
       deleteChecklistMutation.mutate({ checklistId });
     }
@@ -200,15 +201,16 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const handleAddItem = () => {
     if (!selectedChecklistId || !selectedCoords || !newItemTitle) return;
 
+    // Send 'name' instead of 'title' to the backend
     const newItem = {
-      title: newItemTitle,
+      name: newItemTitle,
       latitude: selectedCoords.lat,
       longitude: selectedCoords.lng,
     };
 
     addItemsMutation.mutate({
       checklistId: selectedChecklistId,
-      data: [newItem],
+      data: [newItem as any],
     });
   };
 
@@ -394,7 +396,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
               >
                 <div>
                   <strong style={{ color: 'white', fontSize: '13px' }}>
-                    {idx + 1}. {item.title}
+                    {idx + 1}. {item.name} {/* Changed from item.title */}
                   </strong>
                   <div style={{ color: '#94a3b8', fontSize: '11px' }}>
                     {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}

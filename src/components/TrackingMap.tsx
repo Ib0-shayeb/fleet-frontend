@@ -38,7 +38,7 @@ export default function TrackingMap({
         center: { lat: 31.9522, lng: 35.915 },
         zoom: 13,
       });
-      onMapLoaded(mapInstance.current);
+      onMapLoaded?.(mapInstance.current);
     }
   }, [onMapLoaded]);
 
@@ -148,7 +148,7 @@ export default function TrackingMap({
         });
 
         polyline.addListener('click', () => {
-          if (trip.tripId) onTripClick(trip.tripId);
+          if (trip.tripId) onTripClick?.(trip.tripId);
         });
 
         polyline.setMap(mapInstance.current);
