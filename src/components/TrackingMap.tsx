@@ -2,15 +2,15 @@ import { useEffect, useRef, useMemo } from 'react';
 import { useGetHistory, type DriverTripHistory } from '../api/generated';
 import { AXIOS_INSTANCE } from '../api/axios-instance';
 
-interface TrackingMapProps {
+export interface TrackingMapProps {
   selectedUserIds: number[];
   isLiveActive: boolean;
   dateRange: {
     start: string;
     end: string;
   };
-  onMapLoaded: (map: google.maps.Map) => void;
-  onTripClick: (tripId: number) => void;
+  onMapLoaded?: (map: google.maps.Map) => void;
+  onTripClick?: (tripId: number) => void;
 }
 
 function formatIsoDate(localDateTimeValue: string): string {
