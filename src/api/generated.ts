@@ -31,6 +31,7 @@ export interface ChecklistItem {
   description?: string;
   googlePlaceId?: string;
   addedById?: number;
+  completedAt?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -79,6 +80,7 @@ export interface Checklist {
   name?: string;
   fleetId?: number;
   driverId?: number;
+  completedAt?: string;
 }
 
 export type RegisterWorkerBody = {[key: string]: string};
