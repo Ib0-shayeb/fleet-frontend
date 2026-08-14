@@ -27,6 +27,8 @@ import { customInstance } from './axios-instance';
 export interface ChecklistItem {
   id?: number;
   checklistId?: number;
+  name?: string;
+  description?: string;
   googlePlaceId?: string;
   addedById?: number;
   latitude?: number;
@@ -99,8 +101,6 @@ export type LogLocation200 = { [key: string]: unknown };
 
 export type EndTrip200 = { [key: string]: unknown };
 
-export type DeleteChecklistItems200 = { [key: string]: unknown };
-
 export type AddChecklistItems1200 = { [key: string]: unknown };
 
 export type LogLocationBatch200 = { [key: string]: unknown };
@@ -118,6 +118,8 @@ end: string;
 };
 
 export type DeleteChecklist200 = { [key: string]: unknown };
+
+export type DeleteChecklistItems200 = { [key: string]: unknown };
 
 export type DeleteChecklistItems1200 = { [key: string]: unknown };
 
@@ -525,64 +527,6 @@ const {mutation: mutationOptions} = options ?
       > => {
 
       const mutationOptions = getEndTripMutationOptions(options);
-
-      return useMutation(mutationOptions, queryClient);
-    }
-    
-export const deleteChecklistItems = (
-    checklistId: number,
-    itemId: number,
- signal?: AbortSignal
-) => {
-      
-      
-      return customInstance<DeleteChecklistItems200>(
-      {url: `/api/driver/locations/checklist/${checklistId}/delete-item/${itemId}`, method: 'POST', signal
-    },
-      );
-    }
-  
-
-
-export const getDeleteChecklistItemsMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext> => {
-
-const mutationKey = ['deleteChecklistItems'];
-const {mutation: mutationOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }};
-
-      
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChecklistItems>>, {checklistId: number;itemId: number}> = (props) => {
-          const {checklistId,itemId} = props ?? {};
-
-          return  deleteChecklistItems(checklistId,itemId,)
-        }
-
-        
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type DeleteChecklistItemsMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChecklistItems>>>
-    
-    export type DeleteChecklistItemsMutationError = unknown
-
-    export const useDeleteChecklistItems = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext>, }
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof deleteChecklistItems>>,
-        TError,
-        {checklistId: number;itemId: number},
-        TContext
-      > => {
-
-      const mutationOptions = getDeleteChecklistItemsMutationOptions(options);
 
       return useMutation(mutationOptions, queryClient);
     }
@@ -1683,6 +1627,63 @@ const {mutation: mutationOptions} = options ?
       return useMutation(mutationOptions, queryClient);
     }
     
+export const deleteChecklistItems = (
+    checklistId: number,
+    itemId: number,
+ ) => {
+      
+      
+      return customInstance<DeleteChecklistItems200>(
+      {url: `/api/manager/locations/checklist/${checklistId}/delete-item/${itemId}`, method: 'DELETE'
+    },
+      );
+    }
+  
+
+
+export const getDeleteChecklistItemsMutationOptions = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext> => {
+
+const mutationKey = ['deleteChecklistItems'];
+const {mutation: mutationOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }};
+
+      
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChecklistItems>>, {checklistId: number;itemId: number}> = (props) => {
+          const {checklistId,itemId} = props ?? {};
+
+          return  deleteChecklistItems(checklistId,itemId,)
+        }
+
+        
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteChecklistItemsMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChecklistItems>>>
+    
+    export type DeleteChecklistItemsMutationError = unknown
+
+    export const useDeleteChecklistItems = <TError = unknown,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChecklistItems>>, TError,{checklistId: number;itemId: number}, TContext>, }
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof deleteChecklistItems>>,
+        TError,
+        {checklistId: number;itemId: number},
+        TContext
+      > => {
+
+      const mutationOptions = getDeleteChecklistItemsMutationOptions(options);
+
+      return useMutation(mutationOptions, queryClient);
+    }
+    
 export const deleteChecklistItems1 = (
     checklistId: number,
     itemId: number,
@@ -1690,7 +1691,7 @@ export const deleteChecklistItems1 = (
       
       
       return customInstance<DeleteChecklistItems1200>(
-      {url: `/api/manager/locations/checklist/${checklistId}/delete-item/${itemId}`, method: 'DELETE'
+      {url: `/api/driver/locations/checklist/${checklistId}/delete-item/${itemId}`, method: 'DELETE'
     },
       );
     }
