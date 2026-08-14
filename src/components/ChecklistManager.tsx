@@ -14,11 +14,11 @@ import {
 } from '../api/generated';
 import type { RightPanelState } from '../types';
 
-// Updated interface: Changed 'title' to 'name' to match backend
 interface ChecklistItem {
   id?: number;
   checklistId?: number;
   name: string;
+  description?: string; // Added description
   latitude: number;
   longitude: number;
 }
@@ -44,6 +44,18 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
       enabled: !!selectedChecklistId,
     },
   });
+
+  // Form & Location State
+  const [newChecklistName, setNewChecklistName] = useState('');
+  const [isMapPickActive, setIsMapPickActive] = useState(false);
+  
+  const [newItemTitle, setNewItemTitle] = useState('');
+  const [newItemDescription, setNewItemDescription] = useState(''); // New description state
+  
+  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const autocompleteRef = useRef<HTMLInputElement>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
 
   // 2. Generated Mutation Hooks
   const createChecklistMutation = useCreateChecklist({
@@ -71,7 +83,9 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
             queryKey: getGetChecklistItemsQueryKey(selectedChecklistId),
           });
         }
+        // Clear all form fields on success
         setNewItemTitle('');
+        setNewItemDescription('');
         setSelectedCoords(null);
       },
     },
@@ -96,15 +110,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
       },
     },
   });
-
-  // Form & Location State
-  const [newChecklistName, setNewChecklistName] = useState('');
-  const [isMapPickActive, setIsMapPickActive] = useState(false);
-  const [newItemTitle, setNewItemTitle] = useState('');
-  const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
-
-  const autocompleteRef = useRef<HTMLInputElement>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
 
   // Update map markers when items change
   useEffect(() => {
@@ -171,7 +176,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         position: { lat: item.latitude, lng: item.longitude },
         map: mapInstance,
         label: `${idx + 1}`,
-        title: item.name, // Map hover title uses item.name
+        title: item.name,
       });
 
       bounds.extend({ lat: item.latitude, lng: item.longitude });
@@ -201,9 +206,10 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const handleAddItem = () => {
     if (!selectedChecklistId || !selectedCoords || !newItemTitle) return;
 
-    // Send 'name' instead of 'title' to the backend
+    // Build the new item payload with description
     const newItem = {
       name: newItemTitle,
+      description: newItemDescription, // Pass description to API
       latitude: selectedCoords.lat,
       longitude: selectedCoords.lng,
     };
@@ -307,10 +313,10 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
   // View 2: Edit Checklist Waypoints
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <button
         onClick={() => setPanelState({ mode: 'CHECKLIST_LIST' })}
-        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '12px' }}
+        style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '12px', alignSelf: 'flex-start' }}
       >
         ← Back to all checklists
       </button>
@@ -320,8 +326,9 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           <h4 style={{ margin: '0 0 12px 0', color: 'white' }}>{selectedChecklist.name}</h4>
 
           <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label>Assigned Driver</label>
+            <label style={{ fontSize: '12px', color: '#cbd5e1' }}>Assigned Driver</label>
             <select
+              style={{ width: '100%', marginTop: '4px', padding: '6px', borderRadius: '4px' }}
               value={selectedChecklist.driverId || ''}
               onChange={(e) => handleAssignDriver(Number(e.target.value))}
               disabled={assignDriverMutation.isPending}
@@ -337,7 +344,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
           <div style={{ backgroundColor: '#1e293b', padding: '12px', borderRadius: '6px', marginBottom: '16px' }}>
             <label style={{ display: 'block', fontSize: '12px', color: '#cbd5e1', marginBottom: '6px' }}>
-              Search Place or Address
+              Add a New Waypoint
             </label>
             <input
               ref={autocompleteRef}
@@ -349,7 +356,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' }}>
               <button
                 className="action-btn"
-                style={{ backgroundColor: isMapPickActive ? '#ef4444' : '#3b82f6', fontSize: '12px' }}
+                style={{ backgroundColor: isMapPickActive ? '#ef4444' : '#3b82f6', fontSize: '12px', padding: '6px 12px' }}
                 onClick={() => setIsMapPickActive(!isMapPickActive)}
               >
                 {isMapPickActive ? 'Click Map Spot...' : '📍 Pick Spot on Map'}
@@ -369,6 +376,24 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
               style={{ width: '100%', marginBottom: '10px' }}
             />
 
+            {/* NEW: Textarea for the Description */}
+            <textarea
+              placeholder="Description (Optional) - e.g. 'Drop package at back door'"
+              value={newItemDescription}
+              onChange={(e) => setNewItemDescription(e.target.value)}
+              style={{
+                width: '100%',
+                marginBottom: '10px',
+                padding: '8px',
+                minHeight: '60px',
+                borderRadius: '4px',
+                resize: 'vertical',
+                backgroundColor: '#0f172a',
+                color: 'white',
+                border: '1px solid #334155'
+              }}
+            />
+
             <button
               className="action-btn"
               style={{ width: '100%', backgroundColor: '#10b981' }}
@@ -380,28 +405,38 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           </div>
 
           <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Checklist Waypoints ({items.length})</h5>
-          <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+          <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '4px' }}>
             {items.map((item: any, idx: number) => (
               <div
                 key={item.id || idx}
                 style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
+                  alignItems: 'flex-start',
                   padding: '8px 12px',
                   backgroundColor: '#0f172a',
                   marginBottom: '6px',
                   borderRadius: '4px',
+                  border: '1px solid #334155'
                 }}
               >
-                <div>
-                  <strong style={{ color: 'white', fontSize: '13px' }}>
-                    {idx + 1}. {item.name} {/* Changed from item.title */}
+                <div style={{ flexGrow: 1, paddingRight: '8px' }}>
+                  <strong style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '2px' }}>
+                    {idx + 1}. {item.name}
                   </strong>
+                  
+                  {/* NEW: Render Description if it exists */}
+                  {item.description && (
+                    <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '4px', whiteSpace: 'pre-wrap' }}>
+                      {item.description}
+                    </div>
+                  )}
+
                   <div style={{ color: '#94a3b8', fontSize: '11px' }}>
                     {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
                   </div>
                 </div>
+                
                 {item.id && (
                   <button
                     onClick={() => handleDeleteItem(item.id)}
@@ -414,6 +449,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                       borderRadius: '4px',
                       cursor: 'pointer',
                       fontSize: '11px',
+                      marginTop: '2px'
                     }}
                   >
                     Delete
