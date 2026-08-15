@@ -184,18 +184,17 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     }
   };
 
-  // FIX: Shifted parameters to accurately map against generated Axios objects
   const handleCreateChecklist = () => {
     if (!newChecklistName.trim()) return;
     createChecklistMutation.mutate({ 
-      data: { name: newChecklistName } // Using 'data' for the Request Body
+      data: { name: newChecklistName } 
     } as any);
   };
 
   const handleDeleteChecklist = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this checklist?')) {
-      deleteChecklistMutation.mutate({ id, checklistId: id } as any);
+      deleteChecklistMutation.mutate({ checklistId: id });
     }
   };
 
@@ -212,17 +211,16 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     addItemsMutation.mutate({
       id: selectedChecklistId,
       checklistId: selectedChecklistId,
-      data: [newItem], // Request body containing items
+      data: [newItem],
     } as any);
   };
 
   const handleDeleteItem = (itemId: number) => {
     if (!selectedChecklistId) return;
     deleteItemMutation.mutate({
-      id: selectedChecklistId,
       checklistId: selectedChecklistId,
       itemId,
-    } as any);
+    });
   };
 
   const handleAssignDriver = (driverId: number) => {
@@ -231,7 +229,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
       id: selectedChecklistId,
       checklistId: selectedChecklistId,
       driverId,
-      params: { driverId } // Supports both path and query variations
+      params: { driverId }
     } as any);
   };
 
@@ -257,11 +255,11 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
         <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Active Roster ({checklists.length})</h5>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-        {checklists.map((c: any) => {
-            const variables = deleteChecklistMutation.variables as any;
+          {checklists.map((c: any) => {
             const isDeleting =
               deleteChecklistMutation.isPending &&
-              (variables?.id === safeId(c) || variables?.checklistId === safeId(c));
+              deleteChecklistMutation.variables?.checklistId === safeId(c);
+
             return (
               <div
                 key={safeId(c)}
