@@ -32,11 +32,9 @@ interface Props {
 export default function ChecklistManager({ panelState, setPanelState, mapInstance }: Props) {
   const queryClient = useQueryClient();
 
-  // FIX: Cast hooks to any to suppress TS2554 errors 
   const { data: workers } = (useGetAllWorkers as any)();
   const { data: checklists = [] } = (useGetAllChecklists as any)();
 
-  // FIX: Helper to safely extract properties from ChecklistWithItemsDTO wrappers
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
   const safeName = (c: any) => c?.checklist?.name ?? c?.name;
   const safeDriverId = (c: any) => c?.checklist?.driverId ?? c?.driverId;
@@ -50,19 +48,15 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     },
   });
 
-  // Form & Location State
   const [newChecklistName, setNewChecklistName] = useState('');
   const [isMapPickActive, setIsMapPickActive] = useState(false);
-  
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
-  
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
 
-  // 2. Generated Mutation Hooks
   const createChecklistMutation = useCreateChecklist({
     mutation: {
       onSuccess: () => {
@@ -76,6 +70,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+        setPanelState({ mode: 'CHECKLIST_LIST' });
       },
     },
   });
@@ -115,7 +110,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     },
   });
 
-  // Update map markers when items change
   useEffect(() => {
     if (panelState.mode === 'CHECKLIST_EDIT' && items) {
       renderMapMarkers(items as unknown as ChecklistItem[]);
@@ -124,7 +118,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     }
   }, [items, panelState.mode]);
 
-  // Google Places Autocomplete Setup
   useEffect(() => {
     if (panelState.mode === 'CHECKLIST_EDIT' && autocompleteRef.current && window.google?.maps?.places) {
       const autocomplete = new window.google.maps.places.Autocomplete(autocompleteRef.current);
@@ -145,7 +138,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     }
   }, [panelState.mode, mapInstance]);
 
-  // Click on Map Listener to Select Waypoint
   useEffect(() => {
     if (!mapInstance || !isMapPickActive || panelState.mode !== 'CHECKLIST_EDIT') return;
 
@@ -192,19 +184,18 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     }
   };
 
+  // FIX: Shifted parameters to accurately map against generated Axios objects
   const handleCreateChecklist = () => {
     if (!newChecklistName.trim()) return;
-  
-    // FIX: Cast arguments to any to bypass OpenAPI mutation requirements
     createChecklistMutation.mutate({ 
-      params: { name: newChecklistName } 
+      data: { name: newChecklistName } // Using 'data' for the Request Body
     } as any);
   };
 
-  const handleDeleteChecklist = (e: React.MouseEvent, checklistId: number) => {
+  const handleDeleteChecklist = (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
     if (window.confirm('Are you sure you want to delete this checklist?')) {
-      deleteChecklistMutation.mutate({ checklistId } as any);
+      deleteChecklistMutation.mutate({ id, checklistId: id } as any);
     }
   };
 
@@ -219,14 +210,16 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     };
 
     addItemsMutation.mutate({
+      id: selectedChecklistId,
       checklistId: selectedChecklistId,
-      data: [newItem as any],
+      data: [newItem], // Request body containing items
     } as any);
   };
 
   const handleDeleteItem = (itemId: number) => {
     if (!selectedChecklistId) return;
     deleteItemMutation.mutate({
+      id: selectedChecklistId,
       checklistId: selectedChecklistId,
       itemId,
     } as any);
@@ -235,12 +228,13 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const handleAssignDriver = (driverId: number) => {
     if (!selectedChecklistId) return;
     assignDriverMutation.mutate({
+      id: selectedChecklistId,
       checklistId: selectedChecklistId,
       driverId,
+      params: { driverId } // Supports both path and query variations
     } as any);
   };
 
-  // View 1: List All Checklists
   if (panelState.mode === 'CHECKLIST_LIST') {
     return (
       <div>
@@ -266,7 +260,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           {checklists.map((c: any) => {
             const isDeleting =
               deleteChecklistMutation.isPending &&
-              deleteChecklistMutation.variables?.checklistId === safeId(c);
+              (deleteChecklistMutation.variables?.id === safeId(c) || deleteChecklistMutation.variables?.checklistId === safeId(c));
 
             return (
               <div
@@ -315,7 +309,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     );
   }
 
-  // View 2: Edit Checklist Waypoints
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <button
@@ -427,18 +420,15 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                   <strong style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '2px' }}>
                     {idx + 1}. {item.name}
                   </strong>
-                  
                   {item.description && (
                     <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '4px', whiteSpace: 'pre-wrap' }}>
                       {item.description}
                     </div>
                   )}
-
                   <div style={{ color: '#94a3b8', fontSize: '11px' }}>
                     {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
                   </div>
                 </div>
-                
                 {item.id && (
                   <button
                     onClick={() => handleDeleteItem(item.id)}

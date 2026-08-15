@@ -23,7 +23,7 @@ interface SidebarProps {
   setIsLiveActive: (active: boolean) => void;
   dateRange: { start: string; end: string };
   setDateRange: (range: { start: string; end: string }) => void;
-  onSelectDriverChecklist?: (driverId: number) => void; // Added handler
+  onSelectDriverChecklist?: (driverId: number) => void;
 }
 
 export default function Sidebar({
@@ -36,8 +36,14 @@ export default function Sidebar({
   setDateRange,
   onSelectDriverChecklist,
 }: SidebarProps) {
-  const { data: allWorkers, isLoading } = useGetAllWorkers();
-  const { data: activeUserIds } = useGetActiveDrivers();
+  // FIX: Cast hooks to any and pass date constraints to active drivers
+  const { data: allWorkers, isLoading } = (useGetAllWorkers as any)();
+  const { data: activeUserIds } = (useGetActiveDrivers as any)({
+    params: {
+      start: dateRange?.start,
+      end: dateRange?.end
+    }
+  });
 
   useEffect(() => {
     if (!dateRange?.start || !dateRange?.end) {
@@ -100,12 +106,11 @@ export default function Sidebar({
                   </small>
                 </div>
 
-                {/* Inspect Driver Checklists Button */}
                 {onSelectDriverChecklist && (
                   <button
                     title="View Driver Tasks"
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevents toggling map path selection
+                      e.stopPropagation();
                       onSelectDriverChecklist(worker.id);
                     }}
                     style={{

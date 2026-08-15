@@ -6,11 +6,9 @@ interface Props {
 }
 
 export default function DriverChecklistView({ driverId, onClose }: Props) {
-  // FIX: Cast hooks to any to suppress expected argument count errors from OpenAPI
   const { data: workers = [] } = (useGetAllWorkers as any)();
   const { data: allChecklists = [], isLoading: isChecklistsLoading } = (useGetAllChecklists as any)();
 
-  // FIX: Helper to safely extract properties whether flat or wrapped in ChecklistWithItemsDTO
   const safeDriverId = (c: any) => c?.checklist?.driverId ?? c?.driverId;
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
 
@@ -72,15 +70,18 @@ export default function DriverChecklistView({ driverId, onClose }: Props) {
   );
 }
 
-// Helper Sub-Component to render a Checklist with its items and progress
+// Helper Sub-Component
 function ChecklistCard({ checklist }: { checklist: any }) {
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
   const safeName = (c: any) => c?.checklist?.name ?? c?.name;
+  
+  const checklistId = safeId(checklist);
 
-  // FIX: Cast hook to any and pass the checklist ID cleanly
-  const { data: items = [], isLoading } = (useGetChecklistItems as any)(safeId(checklist));
+  // FIX: Prevent query from firing if checklistId is undefined/null
+  const { data: items = [], isLoading } = (useGetChecklistItems as any)(checklistId || 0, {
+    query: { enabled: !!checklistId }
+  });
 
-  // Compute completion stats
   const totalItems = items.length;
   const completedItems = items.filter((item: any) => item.status === 'COMPLETED').length;
   const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
@@ -112,7 +113,6 @@ function ChecklistCard({ checklist }: { checklist: any }) {
         </span>
       </div>
 
-      {/* Progress Bar */}
       <div style={{ width: '100%', height: '4px', backgroundColor: '#0f172a', borderRadius: '2px', marginBottom: '12px', overflow: 'hidden' }}>
         <div
           style={{
@@ -124,7 +124,6 @@ function ChecklistCard({ checklist }: { checklist: any }) {
         />
       </div>
 
-      {/* Checklist Items Breakdown */}
       {isLoading ? (
         <small style={{ color: '#64748b' }}>Loading items...</small>
       ) : (
@@ -132,16 +131,15 @@ function ChecklistCard({ checklist }: { checklist: any }) {
           {items.map((item: any, idx: number) => {
             const isCompleted = item.status === 'COMPLETED';
             const isCancelled = item.status === 'CANCELLED';
-
             let statusIcon = '⏳';
-            let statusColor = '#f59e0b'; // Pending - Amber
+            let statusColor = '#f59e0b';
 
             if (isCompleted) {
               statusIcon = '✅';
-              statusColor = '#22c55e'; // Completed - Green
+              statusColor = '#22c55e';
             } else if (isCancelled) {
               statusIcon = '❌';
-              statusColor = '#ef4444'; // Cancelled - Red
+              statusColor = '#ef4444';
             }
 
             return (
@@ -159,21 +157,17 @@ function ChecklistCard({ checklist }: { checklist: any }) {
                     <span style={{ color: 'white', fontSize: '13px', fontWeight: '500' }}>
                       {idx + 1}. {item.name}
                     </span>
-
                     {item.description && (
                       <p style={{ margin: '2px 0 4px 0', color: '#94a3b8', fontSize: '11px', whiteSpace: 'pre-wrap' }}>
                         {item.description}
                       </p>
                     )}
-
                     {item.completedAt && (
                       <div style={{ fontSize: '10px', color: '#22c55e', marginTop: '2px' }}>
                         Completed: {new Date(item.completedAt).toLocaleString()}
                       </div>
                     )}
                   </div>
-
-                  {/* Status Badge */}
                   <span
                     style={{
                       fontSize: '11px',
