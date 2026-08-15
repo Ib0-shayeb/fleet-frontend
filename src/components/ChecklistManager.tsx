@@ -257,11 +257,11 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
         <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Active Roster ({checklists.length})</h5>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {checklists.map((c: any) => {
+        {checklists.map((c: any) => {
+            const variables = deleteChecklistMutation.variables as any;
             const isDeleting =
               deleteChecklistMutation.isPending &&
-              (deleteChecklistMutation.variables?.id === safeId(c) || deleteChecklistMutation.variables?.checklistId === safeId(c));
-
+              (variables?.id === safeId(c) || variables?.checklistId === safeId(c));
             return (
               <div
                 key={safeId(c)}
