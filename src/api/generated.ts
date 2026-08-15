@@ -26,7 +26,6 @@ import type {
 import { customInstance } from './axios-instance';
 export interface ChecklistItem {
   id?: number;
-  checklistId?: number;
   name?: string;
   description?: string;
   googlePlaceId?: string;
@@ -68,19 +67,25 @@ export interface TripHistory {
   logs?: LocationLogDTO[];
 }
 
-export interface User {
-  id?: number;
-  name?: string;
-  phoneNumber?: string;
-  passwordHash?: string;
-}
-
 export interface Checklist {
   id?: number;
   name?: string;
   fleetId?: number;
   driverId?: number;
   completedAt?: string;
+  items?: ChecklistItem[];
+}
+
+export interface ChecklistWithItemsDTO {
+  checklist?: Checklist;
+  items?: ChecklistItem[];
+}
+
+export interface User {
+  id?: number;
+  name?: string;
+  phoneNumber?: string;
+  passwordHash?: string;
 }
 
 export type RegisterWorkerBody = {[key: string]: string};
@@ -117,6 +122,10 @@ export type GetHistoryParams = {
 userIds: number[];
 start: string;
 end: string;
+};
+
+export type GetAllChecklistsParams = {
+driverId: number;
 };
 
 export type DeleteChecklist200 = { [key: string]: unknown };
@@ -971,6 +980,93 @@ export function useHello<TData = Awaited<ReturnType<typeof hello>>, TError = unk
 
 
 
+export const getAllChecklists = (
+    params: GetAllChecklistsParams,
+ signal?: AbortSignal
+) => {
+      
+      
+      return customInstance<ChecklistWithItemsDTO[]>(
+      {url: `/api/manager/locations/checklists`, method: 'GET',
+        params, signal
+    },
+      );
+    }
+  
+
+
+
+export const getGetAllChecklistsQueryKey = (params?: GetAllChecklistsParams,) => {
+    return [
+    `/api/manager/locations/checklists`, ...(params ? [params]: [])
+    ] as const;
+    }
+
+    
+export const getGetAllChecklistsQueryOptions = <TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(params: GetAllChecklistsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+) => {
+
+const {query: queryOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAllChecklistsQueryKey(params);
+
+  
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllChecklists>>> = ({ signal }) => getAllChecklists(params, signal);
+
+      
+
+      
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetAllChecklistsQueryResult = NonNullable<Awaited<ReturnType<typeof getAllChecklists>>>
+export type GetAllChecklistsQueryError = unknown
+
+
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+ params: GetAllChecklistsParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAllChecklists>>,
+          TError,
+          Awaited<ReturnType<typeof getAllChecklists>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+ params: GetAllChecklistsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getAllChecklists>>,
+          TError,
+          Awaited<ReturnType<typeof getAllChecklists>>
+        > , 'initialData'
+      >, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+ params: GetAllChecklistsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
+ params: GetAllChecklistsParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+ , queryClient?: QueryClient 
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetAllChecklistsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  query.queryKey = queryOptions.queryKey ;
+
+  return query;
+}
+
+
+
+
 export const getChecklistItems = (
     checklistId: number,
  signal?: AbortSignal
@@ -1143,7 +1239,7 @@ export function useGetAllWorkers<TData = Awaited<ReturnType<typeof getAllWorkers
 
 
 
-export const getAllChecklists = (
+export const getAllChecklists1 = (
     
  signal?: AbortSignal
 ) => {
@@ -1158,66 +1254,66 @@ export const getAllChecklists = (
 
 
 
-export const getGetAllChecklistsQueryKey = () => {
+export const getGetAllChecklists1QueryKey = () => {
     return [
     `/api/manager/locations/all-checklists`
     ] as const;
     }
 
     
-export const getGetAllChecklistsQueryOptions = <TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+export const getGetAllChecklists1QueryOptions = <TData = Awaited<ReturnType<typeof getAllChecklists1>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists1>>, TError, TData>>, }
 ) => {
 
 const {query: queryOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetAllChecklistsQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getGetAllChecklists1QueryKey();
 
   
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllChecklists>>> = ({ signal }) => getAllChecklists(signal);
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAllChecklists1>>> = ({ signal }) => getAllChecklists1(signal);
 
       
 
       
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists1>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
 }
 
-export type GetAllChecklistsQueryResult = NonNullable<Awaited<ReturnType<typeof getAllChecklists>>>
-export type GetAllChecklistsQueryError = unknown
+export type GetAllChecklists1QueryResult = NonNullable<Awaited<ReturnType<typeof getAllChecklists1>>>
+export type GetAllChecklists1QueryError = unknown
 
 
-export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>> & Pick<
+export function useGetAllChecklists1<TData = Awaited<ReturnType<typeof getAllChecklists1>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists1>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAllChecklists>>,
+          Awaited<ReturnType<typeof getAllChecklists1>>,
           TError,
-          Awaited<ReturnType<typeof getAllChecklists>>
+          Awaited<ReturnType<typeof getAllChecklists1>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>> & Pick<
+export function useGetAllChecklists1<TData = Awaited<ReturnType<typeof getAllChecklists1>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists1>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof getAllChecklists>>,
+          Awaited<ReturnType<typeof getAllChecklists1>>,
           TError,
-          Awaited<ReturnType<typeof getAllChecklists>>
+          Awaited<ReturnType<typeof getAllChecklists1>>
         > , 'initialData'
       >, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+export function useGetAllChecklists1<TData = Awaited<ReturnType<typeof getAllChecklists1>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists1>>, TError, TData>>, }
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
 
-export function useGetAllChecklists<TData = Awaited<ReturnType<typeof getAllChecklists>>, TError = unknown>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists>>, TError, TData>>, }
+export function useGetAllChecklists1<TData = Awaited<ReturnType<typeof getAllChecklists1>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getAllChecklists1>>, TError, TData>>, }
  , queryClient?: QueryClient 
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
-  const queryOptions = getGetAllChecklistsQueryOptions(options)
+  const queryOptions = getGetAllChecklists1QueryOptions(options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 
