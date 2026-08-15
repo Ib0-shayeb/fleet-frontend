@@ -69,7 +69,10 @@ export default function DriverChecklistView({ driverId, onClose }: Props) {
 
 // Helper Sub-Component to render a Checklist with its items and progress
 function ChecklistCard({ checklist }: { checklist: any }) {
-  const { data: items = [], isLoading } = useGetChecklistItems(checklist.id);
+  // Pass both checklist.id and checklist.fleetId to match the updated backend query.
+  // Note: Depending on your specific API generator (like Orval or OpenAPI), 
+  // this might need to be an object instead, e.g., useGetChecklistItems({ checklistId: checklist.id, fleetId: checklist.fleetId })
+  const { data: items = [], isLoading } = useGetChecklistItems(checklist.id, checklist.fleetId);
 
   // Compute completion stats
   const totalItems = items.length;
