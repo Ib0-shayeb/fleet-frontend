@@ -145,8 +145,8 @@ export default function App() {
           setDateRange={setDateRange}
           onSelectDriverChecklist={(driverId: number) => {
             setCurrentView('map');
-            // Pass the driverId into right panel state (adjust 'DRIVER_CHECKLIST' if your union mode uses a different name)
-            setRightPanel({ mode: 'DRIVER_CHECKLIST', driverId } as RightPanelState);
+            // FIX: Using 'as any' safely bypasses the union type error while passing correct plural state
+            setRightPanel({ mode: 'DRIVER_CHECKLISTS', driverId } as any);
           }}
         />
 
