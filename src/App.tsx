@@ -143,6 +143,11 @@ export default function App() {
           setIsLiveActive={setIsLiveActive}
           dateRange={dateRange}
           setDateRange={setDateRange}
+          onSelectDriverChecklist={(driverId: number) => {
+            setCurrentView('map');
+            // Pass the driverId into right panel state (adjust 'DRIVER_CHECKLIST' if your union mode uses a different name)
+            setRightPanel({ mode: 'DRIVER_CHECKLIST', driverId } as RightPanelState);
+          }}
         />
 
         {/* Center Viewport Switcher */}
