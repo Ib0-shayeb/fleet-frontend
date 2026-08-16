@@ -107,26 +107,27 @@ export default function Sidebar({
                 </div>
 
                 {onSelectDriverChecklist && (
-                  <button
-                    title="View Driver Tasks"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectDriverChecklist(worker.id);
-                    }}
-                    style={{
-                      padding: '6px 10px',
-                      backgroundColor: '#1e293b',
-                      color: '#0ea5e9',
-                      border: '1px solid #0ea5e950',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    📋 Tasks
-                  </button>
-                )}
+                <button
+                  title="View Driver Tasks"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevents parent container toggleUserSelection from firing
+                    e.preventDefault();
+                    onSelectDriverChecklist(worker.id);
+                  }}
+                  style={{
+                    padding: '6px 10px',
+                    backgroundColor: '#1e293b',
+                    color: '#0ea5e9',
+                    border: '1px solid #0ea5e950',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  📋 Tasks
+                </button>
+              )}
               </div>
             );
           })}

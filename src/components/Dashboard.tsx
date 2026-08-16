@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Sidebar, { getDefaultStartDateTime, getCurrentEndDateTime } from './Sidebar';
 import TrackingMap from './TrackingMap';
 import AdminViews from './AdminViews';
+import ChecklistManager from './ChecklistManager'; // Adjust import path if needed
+import type { RightPanelState } from '../types';
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [activeView, setActiveView] = useState<'map' | 'creds' | 'register'>('map');
@@ -9,6 +11,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [isLiveActive, setIsLiveActive] = useState(false);
   
+  // State for the Right Panel (Driver Tasks / Checklist Manager)
+  const [panelState, setPanelState] = useState<RightPanelState>({ mode: 'CHECKLIST_LIST' });
+
   const [dateRange, setDateRange] = useState({
     start: getDefaultStartDateTime(),
     end: getCurrentEndDateTime(),
@@ -21,13 +26,13 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     setSelectedUserIds(newSet);
   };
 
-  // NEW: Handler for clicking "Tasks" on a specific driver
+  // EXCLUSIVE SELECTION: Replaces the entire set with ONLY this driver
   const handleSelectDriverChecklist = (driverId: number) => {
-    // 1. Isolate selection to ONLY this driver
+    // 1. Force state to a NEW Set containing ONLY this single driver ID
     setSelectedUserIds(new Set([driverId]));
-    
-    // 2. Add your logic here to open the Driver Tasks Right Panel
-    // e.g., setRightPanelState({ mode: 'DRIVER_CHECKLISTS', driverId });
+
+    // 2. Open the driver tasks sidebar/panel
+    setPanelState({ mode: 'DRIVER_CHECKLISTS', driverId });
   };
 
   return (
@@ -54,15 +59,15 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           setIsLiveActive={setIsLiveActive}
           dateRange={dateRange}
           setDateRange={setDateRange}
-          onSelectDriverChecklist={handleSelectDriverChecklist} // <-- ADDED THIS PROP
+          onSelectDriverChecklist={handleSelectDriverChecklist} // <-- MUST BE PASSED HERE
         />
         
         <div style={{ display: activeView === 'map' ? 'block' : 'none', flexGrow: 1, height: '100%' }}>
-            <TrackingMap 
-              selectedUserIds={Array.from(selectedUserIds)} 
-              isLiveActive={isLiveActive} 
-              dateRange={dateRange} 
-            />
+          <TrackingMap 
+            selectedUserIds={Array.from(selectedUserIds)} 
+            isLiveActive={isLiveActive} 
+            dateRange={dateRange} 
+          />
         </div>
 
         {activeView !== 'map' && <AdminViews activeView={activeView} />}
