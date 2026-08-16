@@ -23,6 +23,7 @@ interface ChecklistItem {
   description?: string;
   latitude: number;
   longitude: number;
+  completedAt?: string | null;
 }
 
 interface Props {
@@ -33,11 +34,18 @@ interface Props {
 
 const CHECKLIST_COLORS = ['#0ea5e9', '#ef4444', '#10b981', '#f59e0b', '#a855f7', '#ec4899'];
 
-// Generate an inline custom SVG map marker with a number inside
-const getSvgMarkerUrl = (color: string, label: string) => {
+// Custom SVG marker generator supporting color palette & green glowing silhouette on completion
+const getSvgMarkerUrl = (color: string, label: string, isCompleted: boolean = false) => {
+  const greenSilhouette = isCompleted
+    ? `<circle cx="16" cy="16" r="18" fill="none" stroke="#22c55e" stroke-width="4" opacity="0.9" filter="drop-shadow(0 0 6px #22c55e)"/>
+       <circle cx="26" cy="6" r="7" fill="#22c55e" stroke="#ffffff" stroke-width="1.5"/>
+       <path fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M22.5 6l2 2 4.5-4.5"/>`
+    : '';
+
   const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 40" width="32" height="40">
-      <path fill="${color}" stroke="#ffffff" stroke-width="2" d="M16 2C8.268 2 2 8.268 2 16c0 8.45 13.083 21.583 13.525 22.016a0.665 0.665 0 0 0 .95 0C16.917 37.583 30 24.45 30 16c0-7.732-6.268-14-14-14z"/>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="-6 -6 44 52" width="44" height="52">
+      ${greenSilhouette}
+      <path fill="${isCompleted ? '#15803d' : color}" stroke="${isCompleted ? '#22c55e' : '#ffffff'}" stroke-width="2" d="M16 2C8.268 2 2 8.268 2 16c0 8.45 13.083 21.583 13.525 22.016a0.665 0.665 0 0 0 .95 0C16.917 37.583 30 24.45 30 16c0-7.732-6.268-14-14-14z"/>
       <text x="16" y="21" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="white" text-anchor="middle">${label}</text>
     </svg>`;
   return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
@@ -62,7 +70,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
   const checklists = isDriverMode ? driverChecklists : allChecklists;
 
-  // Track collapsed checklists so everything defaults to OPEN on initial load
+  // Track collapsed checklists
   const [collapsedChecklists, setCollapsedChecklists] = useState<Record<number, boolean>>({});
 
   const toggleChecklist = (id: number, e?: React.MouseEvent) => {
@@ -76,6 +84,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
   const safeName = (c: any) => c?.checklist?.name ?? c?.name;
   const safeDriverId = (c: any) => c?.checklist?.driverId ?? c?.driverId;
+  const safeCompletedAt = (c: any) => c?.completedAt ?? c?.checklist?.completedAt;
   const safeItems = (c: any): ChecklistItem[] => c?.items ?? c?.checklistItems ?? c?.checklist?.items ?? [];
 
   const selectedChecklistId = panelState.mode === 'CHECKLIST_EDIT' ? (panelState as any).checklistId : null;
@@ -101,7 +110,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     markersRef.current = [];
   };
 
-  // --- MAP MARKER SYNCHRONIZATION EFFECT ---
+  // Map Synchronization with Green Silhouette for Completed Pins
   useEffect(() => {
     if (!mapInstance) return;
     clearMapMarkers();
@@ -109,18 +118,20 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     const bounds = new window.google.maps.LatLngBounds();
     let hasPoints = false;
 
-    // 1. If editing ONE checklist, show only its items (in default blue)
+    // Single Edit Mode Map Pins
     if (panelState.mode === 'CHECKLIST_EDIT' && items.length > 0) {
-      items.forEach((item: any, idx: number) => {
+      items.forEach((item: ChecklistItem, idx: number) => {
         if (item.latitude === undefined || item.longitude === undefined) return;
+        const isCompleted = Boolean(item.completedAt);
+
         const marker = new window.google.maps.Marker({
           position: { lat: Number(item.latitude), lng: Number(item.longitude) },
           map: mapInstance,
           title: item.name,
           icon: {
-            url: getSvgMarkerUrl('#0ea5e9', `${idx + 1}`),
-            scaledSize: new window.google.maps.Size(32, 40),
-            anchor: new window.google.maps.Point(16, 40),
+            url: getSvgMarkerUrl('#0ea5e9', `${idx + 1}`, isCompleted),
+            scaledSize: new window.google.maps.Size(44, 52),
+            anchor: new window.google.maps.Point(22, 52),
           },
         });
         bounds.extend({ lat: Number(item.latitude), lng: Number(item.longitude) });
@@ -128,29 +139,29 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         hasPoints = true;
       });
     } 
-    // 2. If viewing the list/driver mode, show items for ALL UNROLLED checklists
+    // Expanded List / Driver View Map Pins
     else if (panelState.mode === 'CHECKLIST_LIST' || isDriverMode) {
       checklists.forEach((c: any, index: number) => {
         const checklistId = safeId(c);
         const isOpen = !collapsedChecklists[checklistId];
         
-        // Skip if this checklist is collapsed
         if (!isOpen) return;
 
-        // Assign a consistent color based on list index
         const color = CHECKLIST_COLORS[index % CHECKLIST_COLORS.length];
         const itemsList = safeItems(c);
 
-        itemsList.forEach((item: any, idx: number) => {
+        itemsList.forEach((item: ChecklistItem, idx: number) => {
           if (item.latitude === undefined || item.longitude === undefined) return;
+          const isCompleted = Boolean(item.completedAt);
+
           const marker = new window.google.maps.Marker({
             position: { lat: Number(item.latitude), lng: Number(item.longitude) },
             map: mapInstance,
             title: `${safeName(c)} - ${item.name}`,
             icon: {
-              url: getSvgMarkerUrl(color, `${idx + 1}`),
-              scaledSize: new window.google.maps.Size(32, 40),
-              anchor: new window.google.maps.Point(16, 40),
+              url: getSvgMarkerUrl(color, `${idx + 1}`, isCompleted),
+              scaledSize: new window.google.maps.Size(44, 52),
+              anchor: new window.google.maps.Point(22, 52),
             },
           });
           bounds.extend({ lat: Number(item.latitude), lng: Number(item.longitude) });
@@ -164,10 +175,8 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
       mapInstance.fitBounds(bounds);
     }
 
-    // Cleanup markers when component unmounts or mode changes
     return () => clearMapMarkers();
   }, [items, checklists, collapsedChecklists, panelState.mode, mapInstance, isDriverMode]);
-
 
   const invalidateChecklistQueries = () => {
     queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
@@ -335,7 +344,8 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
             const itemsList = safeItems(c);
             const isOpen = !collapsedChecklists[checklistId];
             const isDeleting = deleteChecklistMutation.isPending && deleteChecklistMutation.variables?.checklistId === checklistId;
-            const themeColor = CHECKLIST_COLORS[index % CHECKLIST_COLORS.length]; // Color for map sync
+            const themeColor = CHECKLIST_COLORS[index % CHECKLIST_COLORS.length];
+            const isChecklistCompleted = Boolean(safeCompletedAt(c));
 
             return (
               <div
@@ -343,8 +353,8 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                 style={{
                   backgroundColor: '#1e293b',
                   borderRadius: '6px',
-                  border: '1px solid #334155',
-                  borderLeft: `4px solid ${themeColor}`, // <--- The UI color mapping
+                  border: `1px solid ${isChecklistCompleted ? '#22c55e60' : '#334155'}`,
+                  borderLeft: `4px solid ${isChecklistCompleted ? '#22c55e' : themeColor}`,
                   overflow: 'hidden',
                 }}
               >
@@ -362,8 +372,30 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                   }}
                 >
                   <div>
-                    <strong style={{ color: 'white', display: 'block' }}>{safeName(c)}</strong>
-                    <small style={{ color: '#94a3b8' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <strong style={{ color: 'white', fontSize: '14px' }}>{safeName(c)}</strong>
+                      {/* Checklist Completion Indicator */}
+                      {isChecklistCompleted ? (
+                        <span title="Checklist Completed" style={{ color: '#22c55e', fontSize: '14px', fontWeight: 'bold' }}>
+                          ✓
+                        </span>
+                      ) : (
+                        <span
+                          title="In Progress"
+                          style={{
+                            fontSize: '10px',
+                            color: '#94a3b8',
+                            backgroundColor: '#0f172a',
+                            padding: '1px 6px',
+                            borderRadius: '10px',
+                            border: '1px solid #334155',
+                          }}
+                        >
+                          ⏳ Pending
+                        </span>
+                      )}
+                    </div>
+                    <small style={{ color: '#94a3b8', marginTop: '2px', display: 'block' }}>
                       {safeDriverId(c) ? `Assigned to Driver #${safeDriverId(c)}` : 'Unassigned'}
                       {` • ${itemsList.length} Waypoint${itemsList.length === 1 ? '' : 's'}`}
                     </small>
@@ -412,7 +444,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                   </div>
                 </div>
 
-                {/* Accordion Dropdown Content */}
+                {/* Accordion Body */}
                 {isOpen && (
                   <div style={{ backgroundColor: '#0f172a', padding: '10px 12px' }}>
                     {itemsList.length === 0 ? (
@@ -421,51 +453,93 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                       </small>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {itemsList.map((item: any, idx: number) => (
-                          <div
-                            key={item.id || idx}
-                            style={{
-                              padding: '8px',
-                              backgroundColor: '#1e293b',
-                              borderRadius: '4px',
-                              border: '1px solid #334155',
-                            }}
-                          >
-                            <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
-                              <span style={{ 
-                                backgroundColor: themeColor, 
-                                color: 'white', 
-                                borderRadius: '50%', 
-                                width: '18px', 
-                                height: '18px', 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                fontSize: '10px',
-                                fontWeight: 'bold',
-                                flexShrink: 0,
-                                marginTop: '2px'
-                              }}>
-                                {idx + 1}
-                              </span>
-                              <div>
-                                <strong style={{ color: '#f8fafc', fontSize: '13px', display: 'block', marginBottom: '2px' }}>
-                                  {item.name}
-                               </strong>
-                                {item.description && (
-                                  <p style={{ color: '#cbd5e1', fontSize: '12px', margin: '2px 0 4px 0', whiteSpace: 'pre-wrap' }}>
-                                    {item.description}
-                                  </p>
-                                )}
-                                {item.latitude !== undefined && item.longitude !== undefined && (
-                                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>
-                                    {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+                        {itemsList.map((item: ChecklistItem, idx: number) => {
+                          const isItemCompleted = Boolean(item.completedAt);
+
+                          return (
+                            <div
+                              key={item.id || idx}
+                              style={{
+                                padding: '8px 10px',
+                                backgroundColor: isItemCompleted ? '#0f291e' : '#1e293b',
+                                borderRadius: '4px',
+                                border: `1px solid ${isItemCompleted ? '#22c55e40' : '#334155'}`,
+                              }}
+                            >
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                                {/* Task Index Badge with Completion Tick */}
+                                <span
+                                  style={{
+                                    backgroundColor: isItemCompleted ? '#22c55e' : themeColor,
+                                    color: 'white',
+                                    borderRadius: '50%',
+                                    width: '20px',
+                                    height: '20px',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '11px',
+                                    fontWeight: 'bold',
+                                    flexShrink: 0,
+                                    marginTop: '2px',
+                                    boxShadow: isItemCompleted ? '0 0 6px #22c55e80' : 'none',
+                                  }}
+                                >
+                                  {isItemCompleted ? '✓' : idx + 1}
+                                </span>
+
+                                <div style={{ flexGrow: 1 }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <strong
+                                      style={{
+                                        color: isItemCompleted ? '#cbd5e1' : '#f8fafc',
+                                        fontSize: '13px',
+                                        textDecoration: isItemCompleted ? 'line-through' : 'none',
+                                      }}
+                                    >
+                                      {item.name}
+                                    </strong>
+
+                                    {/* Task Completion Tick vs Soft Indicator */}
+                                    {isItemCompleted ? (
+                                      <span
+                                        title="Completed"
+                                        style={{ color: '#22c55e', fontSize: '13px', fontWeight: 'bold' }}
+                                      >
+                                        ✓
+                                      </span>
+                                    ) : (
+                                      <span
+                                        title="Incomplete"
+                                        style={{
+                                          fontSize: '10px',
+                                          color: '#64748b',
+                                          backgroundColor: '#0f172a',
+                                          padding: '1px 5px',
+                                          borderRadius: '4px',
+                                          border: '1px solid #334155',
+                                        }}
+                                      >
+                                        Unfinished
+                                      </span>
+                                    )}
                                   </div>
-                                )}
+
+                                  {item.description && (
+                                    <p style={{ color: '#94a3b8', fontSize: '12px', margin: '2px 0 4px 0', whiteSpace: 'pre-wrap' }}>
+                                      {item.description}
+                                    </p>
+                                  )}
+                                  {item.latitude !== undefined && item.longitude !== undefined && (
+                                    <div style={{ color: '#64748b', fontSize: '11px' }}>
+                                      {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -478,7 +552,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     );
   }
 
-  // --- EDIT MODE VIEW REMAINS UNCHANGED ---
+  // Edit View
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <button
@@ -490,7 +564,14 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
       {selectedChecklist && (
         <>
-          <h4 style={{ margin: '0 0 12px 0', color: 'white' }}>{safeName(selectedChecklist)}</h4>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <h4 style={{ margin: 0, color: 'white' }}>{safeName(selectedChecklist)}</h4>
+            {safeCompletedAt(selectedChecklist) && (
+              <span title="Checklist Completed" style={{ color: '#22c55e', fontSize: '16px', fontWeight: 'bold' }}>
+                ✓
+              </span>
+            )}
+          </div>
 
           <div className="form-group" style={{ marginBottom: '16px' }}>
             <label style={{ fontSize: '12px', color: '#cbd5e1' }}>Assigned Driver</label>
@@ -566,42 +647,53 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
           <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Checklist Waypoints ({items.length})</h5>
           <div style={{ flexGrow: 1, overflowY: 'auto', paddingRight: '4px' }}>
-            {items.map((item: any, idx: number) => (
-              <div
-                key={item.id || idx}
-                style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
-                  padding: '8px 12px', backgroundColor: '#0f172a', marginBottom: '6px',
-                  borderRadius: '4px', border: '1px solid #334155'
-                }}
-              >
-                <div style={{ flexGrow: 1, paddingRight: '8px' }}>
-                  <strong style={{ color: 'white', fontSize: '13px', display: 'block', marginBottom: '2px' }}>
-                    {idx + 1}. {item.name}
-                  </strong>
-                  {item.description && (
-                    <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '4px', whiteSpace: 'pre-wrap' }}>
-                      {item.description}
+            {items.map((item: ChecklistItem, idx: number) => {
+              const isDone = Boolean(item.completedAt);
+
+              return (
+                <div
+                  key={item.id || idx}
+                  style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                    padding: '8px 12px', backgroundColor: isDone ? '#0f291e' : '#0f172a', marginBottom: '6px',
+                    borderRadius: '4px', border: `1px solid ${isDone ? '#22c55e40' : '#334155'}`
+                  }}
+                >
+                  <div style={{ flexGrow: 1, paddingRight: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <strong style={{ color: 'white', fontSize: '13px' }}>
+                        {idx + 1}. {item.name}
+                      </strong>
+                      {isDone ? (
+                        <span style={{ color: '#22c55e', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+                      ) : (
+                        <span style={{ fontSize: '10px', color: '#64748b', fontStyle: 'italic' }}>Pending</span>
+                      )}
                     </div>
-                  )}
-                  <div style={{ color: '#94a3b8', fontSize: '11px' }}>
-                    {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                    {item.description && (
+                      <div style={{ color: '#cbd5e1', fontSize: '12px', marginBottom: '4px', whiteSpace: 'pre-wrap' }}>
+                        {item.description}
+                      </div>
+                    )}
+                    <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                      {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
+                    </div>
                   </div>
+                  {item.id && (
+                    <button
+                      onClick={() => handleDeleteItem(item.id!)}
+                      disabled={deleteItemMutation.isPending}
+                      style={{
+                        backgroundColor: '#ef4444', color: 'white', border: 'none',
+                        padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', marginTop: '2px'
+                      }}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
-                {item.id && (
-                  <button
-                    onClick={() => handleDeleteItem(item.id)}
-                    disabled={deleteItemMutation.isPending}
-                    style={{
-                      backgroundColor: '#ef4444', color: 'white', border: 'none',
-                      padding: '4px 8px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px', marginTop: '2px'
-                    }}
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
