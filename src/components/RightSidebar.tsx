@@ -9,6 +9,8 @@ interface Props {
 }
 
 export default function RightSidebar({ panelState, setPanelState, mapInstance }: Props) {
+  const mode = panelState.mode as string;
+
   return (
     <aside
       style={{
@@ -32,9 +34,10 @@ export default function RightSidebar({ panelState, setPanelState, mapInstance }:
         }}
       >
         <span style={{ fontWeight: 'bold', color: 'white' }}>
-          {panelState.mode === 'TRIP_DETAILS' && 'Trip Analysis'}
-          {panelState.mode === 'CHECKLIST_LIST' && 'Fleet Checklists'}
-          {panelState.mode === 'CHECKLIST_EDIT' && 'Waypoint Manager'}
+          {mode === 'TRIP_DETAILS' && 'Trip Analysis'}
+          {mode === 'CHECKLIST_LIST' && 'Fleet Checklists'}
+          {mode === 'DRIVER_CHECKLISTS' && 'Driver Tasks'}
+          {mode === 'CHECKLIST_EDIT' && 'Waypoint Manager'}
         </span>
         <button
           onClick={() => setPanelState({ mode: 'CLOSED' })}
@@ -45,11 +48,11 @@ export default function RightSidebar({ panelState, setPanelState, mapInstance }:
       </div>
 
       <div style={{ flexGrow: 1, overflowY: 'auto', padding: '16px' }}>
-        {panelState.mode === 'TRIP_DETAILS' && (
-          <TripDetailsView tripId={panelState.tripId} />
+        {mode === 'TRIP_DETAILS' && (
+          <TripDetailsView tripId={(panelState as any).tripId} />
         )}
 
-        {(panelState.mode === 'CHECKLIST_LIST' || panelState.mode === 'CHECKLIST_EDIT') && (
+        {(mode === 'CHECKLIST_LIST' || mode === 'CHECKLIST_EDIT' || mode === 'DRIVER_CHECKLISTS') && (
           <ChecklistManager
             panelState={panelState}
             setPanelState={setPanelState}

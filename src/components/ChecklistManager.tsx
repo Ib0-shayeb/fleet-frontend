@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useGetAllWorkers,
+  useGetAllChecklists,
   useGetAllChecklists1,
   useGetChecklistItems,
   useCreateChecklist,
@@ -9,6 +10,7 @@ import {
   useAddChecklistItems,
   useDeleteChecklistItems,
   useAssignDriver,
+  getGetAllChecklistsQueryKey,
   getGetAllChecklists1QueryKey,
   getGetChecklistItemsQueryKey,
 } from '../api/generated';
@@ -32,14 +34,29 @@ interface Props {
 export default function ChecklistManager({ panelState, setPanelState, mapInstance }: Props) {
   const queryClient = useQueryClient();
 
+  const isDriverMode = (panelState.mode as string) === 'DRIVER_CHECKLISTS';
+  const driverId = isDriverMode ? (panelState as any).driverId : undefined;
+
   const { data: workers } = (useGetAllWorkers as any)();
-  const { data: checklists = [] } = (useGetAllChecklists1 as any)();
+
+  // 1. Fetch all checklists for global fleet view (/api/manager/locations/all-checklists)
+  const { data: allChecklists = [] } = (useGetAllChecklists1 as any)({
+    query: { enabled: !isDriverMode },
+  });
+
+  // 2. Fetch driver-specific checklists (/api/manager/locations/checklists)
+  const { data: driverChecklists = [] } = (useGetAllChecklists as any)(
+    { params: { driverId, userId: driverId } },
+    { query: { enabled: isDriverMode } }
+  );
+
+  const checklists = isDriverMode ? driverChecklists : allChecklists;
 
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
   const safeName = (c: any) => c?.checklist?.name ?? c?.name;
   const safeDriverId = (c: any) => c?.checklist?.driverId ?? c?.driverId;
 
-  const selectedChecklistId = panelState.mode === 'CHECKLIST_EDIT' ? panelState.checklistId : null;
+  const selectedChecklistId = panelState.mode === 'CHECKLIST_EDIT' ? (panelState as any).checklistId : null;
   const selectedChecklist = checklists.find((c: any) => safeId(c) === selectedChecklistId) || null;
 
   const { data: items = [] } = (useGetChecklistItems as any)(selectedChecklistId || 0, {
@@ -57,10 +74,15 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
 
+  const invalidateChecklistQueries = () => {
+    queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+  };
+
   const createChecklistMutation = useCreateChecklist({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
+        invalidateChecklistQueries();
         setNewChecklistName('');
       },
     },
@@ -69,7 +91,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const deleteChecklistMutation = useDeleteChecklist({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
+        invalidateChecklistQueries();
         setPanelState({ mode: 'CHECKLIST_LIST' });
       },
     },
@@ -105,7 +127,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const assignDriverMutation = useAssignDriver({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
+        invalidateChecklistQueries();
       },
     },
   });
@@ -223,19 +245,27 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     });
   };
 
-  const handleAssignDriver = (driverId: number) => {
+  const handleAssignDriver = (driverIdToAssign: number) => {
     if (!selectedChecklistId) return;
     assignDriverMutation.mutate({
       id: selectedChecklistId,
       checklistId: selectedChecklistId,
-      driverId,
-      params: { driverId }
+      driverId: driverIdToAssign,
+      params: { driverId: driverIdToAssign }
     } as any);
   };
 
-  if (panelState.mode === 'CHECKLIST_LIST') {
+  if (panelState.mode === 'CHECKLIST_LIST' || isDriverMode) {
     return (
       <div>
+        {isDriverMode && (
+          <div style={{ marginBottom: '12px', padding: '8px', backgroundColor: '#1e293b', borderRadius: '4px', border: '1px solid #0ea5e9' }}>
+            <small style={{ color: '#0ea5e9', fontWeight: 'bold' }}>
+              📋 Checklists for Driver #{driverId}
+            </small>
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <input
             type="text"
@@ -253,7 +283,9 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           </button>
         </div>
 
-        <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>Active Roster ({checklists.length})</h5>
+        <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>
+          {isDriverMode ? `Assigned Tasks (${checklists.length})` : `Active Roster (${checklists.length})`}
+        </h5>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {checklists.map((c: any) => {
             const isDeleting =
