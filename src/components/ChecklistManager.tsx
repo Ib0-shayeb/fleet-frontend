@@ -2,14 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   useGetAllWorkers,
-  useGetAllChecklists,
+  useGetAllChecklists1,
   useGetChecklistItems,
   useCreateChecklist,
   useDeleteChecklist,
   useAddChecklistItems,
   useDeleteChecklistItems,
   useAssignDriver,
-  getGetAllChecklistsQueryKey,
+  getGetAllChecklists1QueryKey,
   getGetChecklistItemsQueryKey,
 } from '../api/generated';
 import type { RightPanelState } from '../types';
@@ -33,7 +33,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const queryClient = useQueryClient();
 
   const { data: workers } = (useGetAllWorkers as any)();
-  const { data: checklists = [] } = (useGetAllChecklists as any)();
+  const { data: checklists = [] } = (useGetAllChecklists1 as any)();
 
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
   const safeName = (c: any) => c?.checklist?.name ?? c?.name;
@@ -60,7 +60,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const createChecklistMutation = useCreateChecklist({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
         setNewChecklistName('');
       },
     },
@@ -69,7 +69,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const deleteChecklistMutation = useDeleteChecklist({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
         setPanelState({ mode: 'CHECKLIST_LIST' });
       },
     },
@@ -105,7 +105,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const assignDriverMutation = useAssignDriver({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetAllChecklistsQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getGetAllChecklists1QueryKey() });
       },
     },
   });
