@@ -9,7 +9,6 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [isLiveActive, setIsLiveActive] = useState(false);
   
-  // Dynamically initialize with 2020-01-01 for start and current time for end
   const [dateRange, setDateRange] = useState({
     start: getDefaultStartDateTime(),
     end: getCurrentEndDateTime(),
@@ -20,6 +19,15 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     if (newSet.has(userId)) newSet.delete(userId);
     else newSet.add(userId);
     setSelectedUserIds(newSet);
+  };
+
+  // NEW: Handler for clicking "Tasks" on a specific driver
+  const handleSelectDriverChecklist = (driverId: number) => {
+    // 1. Isolate selection to ONLY this driver
+    setSelectedUserIds(new Set([driverId]));
+    
+    // 2. Add your logic here to open the Driver Tasks Right Panel
+    // e.g., setRightPanelState({ mode: 'DRIVER_CHECKLISTS', driverId });
   };
 
   return (
@@ -46,9 +54,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           setIsLiveActive={setIsLiveActive}
           dateRange={dateRange}
           setDateRange={setDateRange}
+          onSelectDriverChecklist={handleSelectDriverChecklist} // <-- ADDED THIS PROP
         />
         
-        {/* keep the map mounted but hide it so we don't lose the Google Maps instance state */}
         <div style={{ display: activeView === 'map' ? 'block' : 'none', flexGrow: 1, height: '100%' }}>
             <TrackingMap 
               selectedUserIds={Array.from(selectedUserIds)} 
