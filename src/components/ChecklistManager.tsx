@@ -45,9 +45,10 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   });
 
   // 2. Fetch driver-specific checklists (/api/manager/locations/checklists)
+  // Passed query params as 1st arg, React Query options as 2nd arg
   const { data: driverChecklists = [] } = (useGetAllChecklists as any)(
-    { params: { driverId, userId: driverId } },
-    { query: { enabled: isDriverMode } }
+    { userId: driverId, driverId },
+    { query: { enabled: isDriverMode && !!driverId } }
   );
 
   const checklists = isDriverMode ? driverChecklists : allChecklists;
