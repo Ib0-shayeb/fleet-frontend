@@ -11,6 +11,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [isLiveActive, setIsLiveActive] = useState(false);
   
+  // Map instance state shared with ChecklistManager
+  const [mapInstance, setMapInstance] = useState<google.maps.Map | null>(null);
+
   // State for the Driver Tasks / Checklist Manager panel
   const [panelState, setPanelState] = useState<RightPanelState>({ mode: 'CHECKLIST_LIST' });
 
@@ -64,15 +67,16 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
             selectedUserIds={Array.from(selectedUserIds)} 
             isLiveActive={isLiveActive} 
             dateRange={dateRange} 
+            onMapLoad={setMapInstance}
           />
         </div>
 
         {activeView !== 'map' && <AdminViews activeView={activeView} />}
 
-        {/* Uses panelState and ChecklistManager to satisfy TypeScript */}
         <ChecklistManager 
           panelState={panelState} 
           setPanelState={setPanelState} 
+          mapInstance={mapInstance}
         />
       </div>
     </div>
