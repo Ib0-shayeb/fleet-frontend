@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Sidebar, { getDefaultStartDateTime, getCurrentEndDateTime } from './Sidebar';
 import TrackingMap from './TrackingMap';
 import AdminViews from './AdminViews';
-import ChecklistManager from './ChecklistManager'; // Adjust import path if needed
+import ChecklistManager from './ChecklistManager';
 import type { RightPanelState } from '../types';
 
 export default function Dashboard({ onLogout }: { onLogout: () => void }) {
@@ -11,7 +11,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
   const [selectedUserIds, setSelectedUserIds] = useState<Set<number>>(new Set());
   const [isLiveActive, setIsLiveActive] = useState(false);
   
-  // State for the Right Panel (Driver Tasks / Checklist Manager)
+  // State for the Driver Tasks / Checklist Manager panel
   const [panelState, setPanelState] = useState<RightPanelState>({ mode: 'CHECKLIST_LIST' });
 
   const [dateRange, setDateRange] = useState({
@@ -26,12 +26,9 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
     setSelectedUserIds(newSet);
   };
 
-  // EXCLUSIVE SELECTION: Replaces the entire set with ONLY this driver
+  // EXCLUSIVE SELECTION: Deselects all other drivers and selects ONLY this one
   const handleSelectDriverChecklist = (driverId: number) => {
-    // 1. Force state to a NEW Set containing ONLY this single driver ID
     setSelectedUserIds(new Set([driverId]));
-
-    // 2. Open the driver tasks sidebar/panel
     setPanelState({ mode: 'DRIVER_CHECKLISTS', driverId });
   };
 
@@ -50,7 +47,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
       </div>
 
-      <div className="main-container">
+      <div className="main-container" style={{ display: 'flex', height: 'calc(100vh - 60px)', overflow: 'hidden' }}>
         <Sidebar 
           isOpen={isSidebarOpen} 
           selectedUserIds={selectedUserIds} 
@@ -59,7 +56,7 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
           setIsLiveActive={setIsLiveActive}
           dateRange={dateRange}
           setDateRange={setDateRange}
-          onSelectDriverChecklist={handleSelectDriverChecklist} // <-- MUST BE PASSED HERE
+          onSelectDriverChecklist={handleSelectDriverChecklist}
         />
         
         <div style={{ display: activeView === 'map' ? 'block' : 'none', flexGrow: 1, height: '100%' }}>
@@ -71,6 +68,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         </div>
 
         {activeView !== 'map' && <AdminViews activeView={activeView} />}
+
+        {/* Uses panelState and ChecklistManager to satisfy TypeScript */}
+        <ChecklistManager 
+          panelState={panelState} 
+          setPanelState={setPanelState} 
+        />
       </div>
     </div>
   );
