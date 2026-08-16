@@ -44,8 +44,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     query: { enabled: !isDriverMode },
   });
 
-  // 2. Fetch driver-specific checklists (/api/manager/locations/checklists)
-  // Passed query params as 1st arg, React Query options as 2nd arg
+  // 2. Fetch driver-specific checklists with items (/api/manager/locations/checklists)
   const { data: driverChecklists = [] } = (useGetAllChecklists as any)(
     { userId: driverId, driverId },
     { query: { enabled: isDriverMode && !!driverId } }
@@ -53,9 +52,21 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
   const checklists = isDriverMode ? driverChecklists : allChecklists;
 
+  // Track collapsed checklists so everything defaults to OPEN on initial load
+  const [collapsedChecklists, setCollapsedChecklists] = useState<Record<number, boolean>>({});
+
+  const toggleChecklist = (id: number, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setCollapsedChecklists((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
   const safeId = (c: any) => c?.checklist?.id ?? c?.id;
   const safeName = (c: any) => c?.checklist?.name ?? c?.name;
   const safeDriverId = (c: any) => c?.checklist?.driverId ?? c?.driverId;
+  const safeItems = (c: any): ChecklistItem[] => c?.items ?? c?.checklistItems ?? c?.checklist?.items ?? [];
 
   const selectedChecklistId = panelState.mode === 'CHECKLIST_EDIT' ? (panelState as any).checklistId : null;
   const selectedChecklist = checklists.find((c: any) => safeId(c) === selectedChecklistId) || null;
@@ -267,71 +278,150 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <input
-            type="text"
-            placeholder="New checklist name..."
-            value={newChecklistName}
-            onChange={(e) => setNewChecklistName(e.target.value)}
-            style={{ flexGrow: 1 }}
-          />
-          <button
-            className="action-btn"
-            onClick={handleCreateChecklist}
-            disabled={createChecklistMutation.isPending}
-          >
-            {createChecklistMutation.isPending ? 'Creating...' : 'Create'}
-          </button>
-        </div>
+        {!isDriverMode && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="New checklist name..."
+              value={newChecklistName}
+              onChange={(e) => setNewChecklistName(e.target.value)}
+              style={{ flexGrow: 1 }}
+            />
+            <button
+              className="action-btn"
+              onClick={handleCreateChecklist}
+              disabled={createChecklistMutation.isPending}
+            >
+              {createChecklistMutation.isPending ? 'Creating...' : 'Create'}
+            </button>
+          </div>
+        )}
 
         <h5 style={{ color: '#cbd5e1', marginBottom: '8px' }}>
           {isDriverMode ? `Assigned Tasks (${checklists.length})` : `Active Roster (${checklists.length})`}
         </h5>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {checklists.map((c: any) => {
+            const checklistId = safeId(c);
+            const itemsList = safeItems(c);
+            const isOpen = !collapsedChecklists[checklistId];
             const isDeleting =
               deleteChecklistMutation.isPending &&
-              deleteChecklistMutation.variables?.checklistId === safeId(c);
+              deleteChecklistMutation.variables?.checklistId === checklistId;
 
             return (
               <div
-                key={safeId(c)}
-                onClick={() => setPanelState({ mode: 'CHECKLIST_EDIT', checklistId: safeId(c) })}
+                key={checklistId}
                 style={{
-                  padding: '12px',
                   backgroundColor: '#1e293b',
                   borderRadius: '6px',
-                  cursor: 'pointer',
                   border: '1px solid #334155',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  overflow: 'hidden',
                 }}
               >
-                <div>
-                  <strong style={{ color: 'white', display: 'block' }}>{safeName(c)}</strong>
-                  <small style={{ color: '#94a3b8' }}>
-                    {safeDriverId(c) ? `Assigned to Driver #${safeDriverId(c)}` : 'Unassigned'}
-                  </small>
+                {/* Accordion Header */}
+                <div
+                  onClick={(e) => toggleChecklist(checklistId, e)}
+                  style={{
+                    padding: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    backgroundColor: '#1e293b',
+                    borderBottom: isOpen ? '1px solid #334155' : 'none',
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: 'white', display: 'block' }}>{safeName(c)}</strong>
+                    <small style={{ color: '#94a3b8' }}>
+                      {safeDriverId(c) ? `Assigned to Driver #${safeDriverId(c)}` : 'Unassigned'}
+                      {` • ${itemsList.length} Waypoint${itemsList.length === 1 ? '' : 's'}`}
+                    </small>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    {!isDriverMode && (
+                      <button
+                        onClick={(e) => handleDeleteChecklist(e, checklistId)}
+                        disabled={deleteChecklistMutation.isPending}
+                        style={{
+                          backgroundColor: '#ef4444',
+                          color: 'white',
+                          border: 'none',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                        }}
+                      >
+                        {isDeleting ? 'Deleting...' : 'Delete'}
+                      </button>
+                    )}
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPanelState({ mode: 'CHECKLIST_EDIT', checklistId });
+                      }}
+                      style={{
+                        backgroundColor: 'transparent',
+                        border: '1px solid #0ea5e9',
+                        color: '#0ea5e9',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Edit →
+                    </button>
+
+                    <span style={{ color: '#94a3b8', fontSize: '12px', marginLeft: '4px' }}>
+                      {isOpen ? '▲' : '▼'}
+                    </span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <button
-                    onClick={(e) => handleDeleteChecklist(e, safeId(c))}
-                    disabled={deleteChecklistMutation.isPending}
-                    style={{
-                      backgroundColor: '#ef4444',
-                      color: 'white',
-                      border: 'none',
-                      padding: '4px 8px',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                    }}
-                  >
-                    {isDeleting ? 'Deleting...' : 'Delete'}
-                  </button>
-                  <span style={{ color: '#0ea5e9' }}>Edit →</span>
-                </div>
+
+                {/* Accordion Dropdown Content */}
+                {isOpen && (
+                  <div style={{ backgroundColor: '#0f172a', padding: '10px 12px' }}>
+                    {itemsList.length === 0 ? (
+                      <small style={{ color: '#64748b', fontStyle: 'italic' }}>
+                        No waypoints/items attached to this checklist.
+                      </small>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {itemsList.map((item: any, idx: number) => (
+                          <div
+                            key={item.id || idx}
+                            style={{
+                              padding: '8px',
+                              backgroundColor: '#1e293b',
+                              borderRadius: '4px',
+                              border: '1px solid #334155',
+                            }}
+                          >
+                            <strong style={{ color: '#f8fafc', fontSize: '13px', display: 'block', marginBottom: '2px' }}>
+                              {idx + 1}. {item.name}
+                            </strong>
+                            {item.description && (
+                              <p style={{ color: '#cbd5e1', fontSize: '12px', margin: '2px 0 4px 0', whiteSpace: 'pre-wrap' }}>
+                                {item.description}
+                              </p>
+                            )}
+                            {item.latitude !== undefined && item.longitude !== undefined && (
+                              <div style={{ color: '#0ea5e9', fontSize: '11px' }}>
+                                📍 {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}
