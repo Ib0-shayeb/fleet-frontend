@@ -63,12 +63,12 @@ export default function Dashboard({ onLogout }: { onLogout: () => void }) {
         />
         
         <div style={{ display: activeView === 'map' ? 'block' : 'none', flexGrow: 1, height: '100%' }}>
-          <TrackingMap 
-            selectedUserIds={Array.from(selectedUserIds)} 
-            isLiveActive={isLiveActive} 
-            dateRange={dateRange} 
-            onMapLoad={setMapInstance}
-          />
+        <TrackingMap 
+          selectedUserIds={Array.from(selectedUserIds)} 
+          isLiveActive={isLiveActive} 
+          dateRange={dateRange} 
+          onMapLoaded={setMapInstance}
+        />
         </div>
 
         {activeView !== 'map' && <AdminViews activeView={activeView} />}
