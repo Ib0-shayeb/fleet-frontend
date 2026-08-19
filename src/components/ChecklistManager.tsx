@@ -228,9 +228,17 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     mutation: { onSuccess: () => invalidateChecklistQueries() },
   });
 
+  // Google Places Autocomplete bounded dynamically to current map viewport
   useEffect(() => {
     if (panelState.mode === 'CHECKLIST_EDIT' && autocompleteRef.current && window.google?.maps?.places) {
-      const autocomplete = new window.google.maps.places.Autocomplete(autocompleteRef.current);
+      const autocomplete = new window.google.maps.places.Autocomplete(autocompleteRef.current, {
+        fields: ['geometry', 'name', 'formatted_address'],
+      });
+
+      if (mapInstance) {
+        autocomplete.bindTo('bounds', mapInstance);
+      }
+
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         if (place.geometry?.location) {
@@ -374,7 +382,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <strong style={{ color: 'white', fontSize: '14px' }}>{safeName(c)}</strong>
-                      {/* Checklist Completion Indicator */}
                       {isChecklistCompleted ? (
                         <span title="Checklist Completed" style={{ color: '#22c55e', fontSize: '14px', fontWeight: 'bold' }}>
                           ✓
@@ -467,7 +474,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                               }}
                             >
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                                {/* Task Index Badge with Completion Tick */}
                                 <span
                                   style={{
                                     backgroundColor: isItemCompleted ? '#22c55e' : themeColor,
@@ -500,7 +506,6 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                                       {item.name}
                                     </strong>
 
-                                    {/* Task Completion Tick vs Soft Indicator */}
                                     {isItemCompleted ? (
                                       <span
                                         title="Completed"
