@@ -13,18 +13,9 @@ import {
   getGetAllChecklistsQueryKey,
   getGetAllChecklists1QueryKey,
   getGetChecklistItemsQueryKey,
+  type ChecklistItem,
 } from '../api/generated';
 import type { RightPanelState } from '../types';
-
-interface ChecklistItem {
-  id?: number;
-  checklistId?: number;
-  name: string;
-  description?: string;
-  latitude: number;
-  longitude: number;
-  completedAt?: string | null;
-}
 
 interface Props {
   panelState: RightPanelState;
@@ -101,6 +92,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemDescription, setNewItemDescription] = useState('');
   const [selectedCoords, setSelectedCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [selectedGooglePlaceId, setSelectedGooglePlaceId] = useState<string | undefined>(undefined);
 
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -210,6 +202,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         setNewItemTitle('');
         setNewItemDescription('');
         setSelectedCoords(null);
+        setSelectedGooglePlaceId(undefined);
       },
     },
   });
@@ -232,7 +225,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   useEffect(() => {
     if (panelState.mode === 'CHECKLIST_EDIT' && autocompleteRef.current && window.google?.maps?.places) {
       const autocomplete = new window.google.maps.places.Autocomplete(autocompleteRef.current, {
-        fields: ['geometry', 'name', 'formatted_address'],
+        fields: ['geometry', 'name', 'formatted_address', 'place_id'],
       });
 
       if (mapInstance) {
@@ -245,6 +238,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           const lat = place.geometry.location.lat();
           const lng = place.geometry.location.lng();
           setSelectedCoords({ lat, lng });
+          setSelectedGooglePlaceId(place.place_id);
           setNewItemTitle(place.name || place.formatted_address || 'Selected Location');
 
           if (mapInstance) {
@@ -264,6 +258,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setSelectedCoords({ lat, lng });
+        setSelectedGooglePlaceId(undefined);
         setNewItemTitle(`Waypoint (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
         setIsMapPickActive(false);
       }
@@ -297,6 +292,7 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         description: newItemDescription,
         latitude: selectedCoords.lat,
         longitude: selectedCoords.lng,
+        googlePlaceId: selectedGooglePlaceId,
       }],
     } as any);
   };
@@ -680,9 +676,11 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
                         {item.description}
                       </div>
                     )}
-                    <div style={{ color: '#94a3b8', fontSize: '11px' }}>
-                      {item.latitude.toFixed(4)}, {item.longitude.toFixed(4)}
-                    </div>
+                    {item.latitude !== undefined && item.longitude !== undefined && (
+                      <div style={{ color: '#94a3b8', fontSize: '11px' }}>
+                        {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+                      </div>
+                    )}
                   </div>
                   {item.id && (
                     <button
@@ -702,6 +700,120 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+interface DriverChecklistViewProps {
+  driverId: number;
+  onClose?: () => void;
+}
+
+export function DriverChecklistView({ driverId, onClose }: DriverChecklistViewProps) {
+  const { data: workers = [] } = (useGetAllWorkers as any)();
+  const { data: allChecklists = [], isLoading: isChecklistsLoading } = (useGetAllChecklists as any)();
+
+  const safeDriverId = (c: any) => c?.checklist?.driverId ?? c?.driverId;
+  const safeId = (c: any) => c?.checklist?.id ?? c?.id;
+
+  const driver = workers.find((w: any) => w.id === driverId);
+  const driverChecklists = allChecklists.filter((c: any) => safeDriverId(c) === driverId);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Header */}
+      <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {onClose && (
+          <button
+            onClick={onClose}
+            style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '13px' }}
+          >
+            ← Close Panel
+          </button>
+        )}
+      </div>
+
+      {/* Driver Card Info */}
+      <div
+        style={{
+          padding: '12px',
+          backgroundColor: '#1e293b',
+          borderRadius: '6px',
+          border: '1px solid #334155',
+          marginBottom: '16px',
+        }}
+      >
+        <h3 style={{ margin: 0, color: 'white', fontSize: '16px' }}>
+          {driver ? driver.name : `Driver #${driverId}`}
+        </h3>
+        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+          Driver ID: {driverId} {driver?.phoneNumber ? `• ${driver.phoneNumber}` : ''}
+        </span>
+      </div>
+
+      <h4 style={{ color: '#cbd5e1', marginTop: 0, marginBottom: '12px' }}>
+        Assigned Checklists ({driverChecklists.length})
+      </h4>
+
+      {/* Checklists List */}
+      <div style={{ flexGrow: 1, overflowY: 'auto' }}>
+        {isChecklistsLoading && <p style={{ color: '#94a3b8' }}>Loading driver tasks...</p>}
+
+        {!isChecklistsLoading && driverChecklists.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '24px 12px', color: '#64748b', backgroundColor: '#0f172a', borderRadius: '6px' }}>
+            <span style={{ fontSize: '24px', display: 'block', marginBottom: '8px' }}>📭</span>
+            No active checklists assigned to this driver.
+          </div>
+        )}
+
+        {driverChecklists.map((checklist: any) => (
+          <ChecklistCard key={safeId(checklist)} checklist={checklist} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Helper Sub-Component
+function ChecklistCard({ checklist }: { checklist: any }) {
+  const safeId = (c: any) => c?.checklist?.id ?? c?.id;
+  const safeName = (c: any) => c?.checklist?.name ?? c?.name;
+  
+  const checklistId = safeId(checklist);
+
+  const { data: items = [] } = (useGetChecklistItems as any)(checklistId || 0, {
+    query: { enabled: !!checklistId },
+  });
+
+  return (
+    <div
+      style={{
+        backgroundColor: '#1e293b',
+        borderRadius: '6px',
+        border: '1px solid #334155',
+        padding: '12px',
+        marginBottom: '10px',
+      }}
+    >
+      <strong style={{ color: 'white', fontSize: '14px', display: 'block', marginBottom: '8px' }}>
+        {safeName(checklist)}
+      </strong>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {items.map((item: ChecklistItem, idx: number) => (
+          <div
+            key={item.id || idx}
+            style={{
+              padding: '6px 8px',
+              backgroundColor: '#0f172a',
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#cbd5e1',
+            }}
+          >
+            {idx + 1}. {item.name}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
