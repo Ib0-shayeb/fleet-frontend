@@ -96,10 +96,24 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
   const autocompleteRef = useRef<HTMLInputElement>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const previewMarkerRef = useRef<google.maps.Marker | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+
+  const clearPreviewMarker = () => {
+    if (previewMarkerRef.current) {
+      previewMarkerRef.current.setMap(null);
+      previewMarkerRef.current = null;
+    }
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
+      infoWindowRef.current = null;
+    }
+  };
 
   const clearMapMarkers = () => {
     markersRef.current.forEach((m) => m.setMap(null));
     markersRef.current = [];
+    clearPreviewMarker();
   };
 
   // Map Synchronization with Green Silhouette for Completed Pins
@@ -203,6 +217,10 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
         setNewItemDescription('');
         setSelectedCoords(null);
         setSelectedGooglePlaceId(undefined);
+        clearPreviewMarker();
+        if (autocompleteRef.current) {
+          autocompleteRef.current.value = '';
+        }
       },
     },
   });
@@ -221,11 +239,11 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
     mutation: { onSuccess: () => invalidateChecklistQueries() },
   });
 
-  // Google Places Autocomplete bounded dynamically to current map viewport
+  // Google Places Autocomplete with Interactive Google Maps Card / InfoWindow
   useEffect(() => {
     if (panelState.mode === 'CHECKLIST_EDIT' && autocompleteRef.current && window.google?.maps?.places) {
       const autocomplete = new window.google.maps.places.Autocomplete(autocompleteRef.current, {
-        fields: ['geometry', 'name', 'formatted_address', 'place_id'],
+        fields: ['geometry', 'name', 'formatted_address', 'place_id', 'rating', 'user_ratings_total', 'photos', 'url'],
       });
 
       if (mapInstance) {
@@ -234,18 +252,63 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
       autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
-        if (place.geometry?.location) {
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
-          setSelectedCoords({ lat, lng });
-          setSelectedGooglePlaceId(place.place_id);
-          setNewItemTitle(place.name || place.formatted_address || 'Selected Location');
+        if (!place.geometry?.location || !mapInstance) return;
 
-          if (mapInstance) {
-            mapInstance.panTo({ lat, lng });
-            mapInstance.setZoom(15);
-          }
-        }
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        setSelectedCoords({ lat, lng });
+        setSelectedGooglePlaceId(place.place_id);
+        setNewItemTitle(place.name || place.formatted_address || 'Selected Location');
+
+        clearPreviewMarker();
+
+        // 1. Create temporary preview marker
+        const previewMarker = new window.google.maps.Marker({
+          position: { lat, lng },
+          map: mapInstance,
+          animation: window.google.maps.Animation.DROP,
+          title: place.name || 'Selected Place',
+        });
+        previewMarkerRef.current = previewMarker;
+
+        // 2. Build rich Google Maps InfoWindow HTML
+        const photoUrl = place.photos && place.photos.length > 0 ? place.photos[0].getUrl({ maxWidth: 260, maxHeight: 130 }) : null;
+        const ratingStars = place.rating ? '★'.repeat(Math.round(place.rating)) : '';
+
+        const infoWindowContent = `
+          <div style="color: #0f172a; max-width: 250px; font-family: system-ui, -apple-system, sans-serif; padding: 2px;">
+            ${photoUrl ? `<img src="${photoUrl}" alt="${place.name}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; display: block;" />` : ''}
+            <h4 style="margin: 0 0 4px 0; font-size: 14px; font-weight: 700; color: #0f172a; line-height: 1.3;">${place.name || 'Selected Spot'}</h4>
+            <p style="margin: 0 0 6px 0; font-size: 12px; color: #475569; line-height: 1.3;">${place.formatted_address || ''}</p>
+            ${
+              place.rating
+                ? `<div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #d97706; font-weight: 600; margin-bottom: 6px;">
+                    <span>${place.rating.toFixed(1)}</span>
+                    <span style="color: #f59e0b;">${ratingStars}</span>
+                    <span style="color: #64748b; font-weight: normal;">(${place.user_ratings_total || 0})</span>
+                   </div>`
+                : ''
+            }
+            ${
+              place.url
+                ? `<a href="${place.url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; font-size: 11px; color: #2563eb; font-weight: 600; text-decoration: none; margin-top: 2px;">
+                    View on Google Maps ↗
+                   </a>`
+                : ''
+            }
+          </div>
+        `;
+
+        // 3. Render InfoWindow
+        const infoWindow = new window.google.maps.InfoWindow({
+          content: infoWindowContent,
+        });
+        infoWindow.open(mapInstance, previewMarker);
+        infoWindowRef.current = infoWindow;
+
+        // 4. Center map view on place
+        mapInstance.panTo({ lat, lng });
+        mapInstance.setZoom(16);
       });
     }
   }, [panelState.mode, mapInstance]);
@@ -255,12 +318,20 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
 
     const listener = mapInstance.addListener('click', (e: google.maps.MapMouseEvent) => {
       if (e.latLng) {
+        clearPreviewMarker();
         const lat = e.latLng.lat();
         const lng = e.latLng.lng();
         setSelectedCoords({ lat, lng });
         setSelectedGooglePlaceId(undefined);
         setNewItemTitle(`Waypoint (${lat.toFixed(4)}, ${lng.toFixed(4)})`);
         setIsMapPickActive(false);
+
+        const previewMarker = new window.google.maps.Marker({
+          position: { lat, lng },
+          map: mapInstance,
+          animation: window.google.maps.Animation.DROP,
+        });
+        previewMarkerRef.current = previewMarker;
       }
     });
 
@@ -557,7 +628,10 @@ export default function ChecklistManager({ panelState, setPanelState, mapInstanc
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <button
-        onClick={() => setPanelState({ mode: 'CHECKLIST_LIST' })}
+        onClick={() => {
+          clearPreviewMarker();
+          setPanelState({ mode: 'CHECKLIST_LIST' });
+        }}
         style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginBottom: '12px', alignSelf: 'flex-start' }}
       >
         ← Back to all checklists
