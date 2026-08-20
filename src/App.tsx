@@ -15,8 +15,10 @@ export default function App() {
     () => !!localStorage.getItem('token')
   );
 
-  // Updated state type to include 'downloads'
-  const [currentView, setCurrentView] = useState<'map' | 'register' | 'downloads'>('map');
+  // Read initial URL path so direct visits to /downloads render publicly
+  const [currentView, setCurrentView] = useState<'map' | 'register' | 'downloads'>(() => {
+    return window.location.pathname === '/downloads' ? 'downloads' : 'map';
+  });
 
   // Left sidebar controls
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
@@ -39,11 +41,77 @@ export default function App() {
     setRightPanel({ mode: 'CLOSED' });
   };
 
-  // Render Login overlay if not authenticated
-  if (!isAuthenticated) {
-    return <Login onLoginSuccess={() => setIsAuthenticated(true)} />;
+  // ---------------------------------------------------------------------------
+  // 1. PUBLIC DOWNLOAD VIEW (Bypasses authentication completely)
+  // ---------------------------------------------------------------------------
+  if (currentView === 'downloads') {
+    return (
+      <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#0f172a' }}>
+        {/* Navigation button back to Portal / Login */}
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 50 }}>
+          <button
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentView('map');
+            }}
+            style={{
+              padding: '10px 18px',
+              backgroundColor: '#0ea5e9',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              fontSize: '14px',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)',
+            }}
+          >
+            {isAuthenticated ? '← Back to Map' : 'Go to Login →'}
+          </button>
+        </div>
+
+        <AppDownloadPage 
+          androidDownloadUrl="/downloads/app-release.apk"
+          iosDownloadUrl="https://testflight.apple.com/join/YOUR_CODE"
+        />
+      </div>
+    );
   }
 
+  // ---------------------------------------------------------------------------
+  // 2. AUTHENTICATION GUARD
+  // ---------------------------------------------------------------------------
+  if (!isAuthenticated) {
+    return (
+      <div style={{ position: 'relative' }}>
+        {/* Public button on Login screen to visit downloads */}
+        <div style={{ position: 'absolute', top: '20px', right: '20px', zIndex: 50 }}>
+          <button
+            onClick={() => {
+              window.history.pushState({}, '', '/downloads');
+              setCurrentView('downloads');
+            }}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: '#1e293b',
+              color: '#0ea5e9',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '500',
+            }}
+          >
+            📲 Mobile Apps
+          </button>
+        </div>
+        <Login onLoginSuccess={() => setIsAuthenticated(true)} />
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // 3. AUTHENTICATED PORTAL VIEW
+  // ---------------------------------------------------------------------------
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: '100vw', height: '100vh', overflow: 'hidden', backgroundColor: '#0b1120' }}>
       {/* Top Header Navigation Bar */}
@@ -68,7 +136,10 @@ export default function App() {
         {/* Action & View Toggles */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
-            onClick={() => setCurrentView('map')}
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              setCurrentView('map');
+            }}
             style={{
               padding: '8px 14px',
               backgroundColor: currentView === 'map' ? '#0ea5e9' : '#1e293b',
@@ -97,12 +168,14 @@ export default function App() {
             ➕ Register Driver
           </button>
 
-          {/* New Mobile Downloads Button */}
           <button
-            onClick={() => setCurrentView('downloads')}
+            onClick={() => {
+              window.history.pushState({}, '', '/downloads');
+              setCurrentView('downloads');
+            }}
             style={{
               padding: '8px 14px',
-              backgroundColor: currentView === 'downloads' ? '#0ea5e9' : '#1e293b',
+              backgroundColor: '#1e293b',
               color: 'white',
               border: '1px solid #334155',
               borderRadius: '6px',
@@ -181,15 +254,6 @@ export default function App() {
           {currentView === 'register' && (
             <div style={{ height: '100%', padding: '30px', overflowY: 'auto' }}>
               <AdminViews activeView="register" />
-            </div>
-          )}
-
-          {currentView === 'downloads' && (
-            <div style={{ height: '100%', overflowY: 'auto' }}>
-              <AppDownloadPage 
-                androidDownloadUrl="/downloads/app-release.apk"
-                iosDownloadUrl="/downloads/app-release.apk"
-              />
             </div>
           )}
         </div>
