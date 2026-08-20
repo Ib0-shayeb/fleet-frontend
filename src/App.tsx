@@ -7,6 +7,7 @@ import AdminViews from './components/AdminViews';
 import Sidebar from './components/Sidebar';
 import TrackingMap from './components/TrackingMap';
 import RightSidebar from './components/RightSidebar';
+import AppDownloadPage from './components/AppDownloadPage';
 
 export default function App() {
   // Auth state
@@ -14,8 +15,8 @@ export default function App() {
     () => !!localStorage.getItem('token')
   );
 
-  // Main viewport view: 'map' or 'register'
-  const [currentView, setCurrentView] = useState<'map' | 'register'>('map');
+  // Updated state type to include 'downloads'
+  const [currentView, setCurrentView] = useState<'map' | 'register' | 'downloads'>('map');
 
   // Left sidebar controls
   const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
@@ -96,6 +97,22 @@ export default function App() {
             ➕ Register Driver
           </button>
 
+          {/* New Mobile Downloads Button */}
+          <button
+            onClick={() => setCurrentView('downloads')}
+            style={{
+              padding: '8px 14px',
+              backgroundColor: currentView === 'downloads' ? '#0ea5e9' : '#1e293b',
+              color: 'white',
+              border: '1px solid #334155',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontWeight: '500',
+            }}
+          >
+            📲 Mobile Apps
+          </button>
+
           <button
             onClick={() => {
               setCurrentView('map');
@@ -145,14 +162,13 @@ export default function App() {
           setDateRange={setDateRange}
           onSelectDriverChecklist={(driverId: number) => {
             setCurrentView('map');
-            // FIX: Using 'as any' safely bypasses the union type error while passing correct plural state
             setRightPanel({ mode: 'DRIVER_CHECKLISTS', driverId } as any);
           }}
         />
 
         {/* Center Viewport Switcher */}
         <div style={{ flexGrow: 1, position: 'relative', height: '100%' }}>
-          {currentView === 'map' ? (
+          {currentView === 'map' && (
             <TrackingMap
               selectedUserIds={selectedUserIds}
               isLiveActive={isLiveActive}
@@ -160,9 +176,20 @@ export default function App() {
               onMapLoaded={setMapInstance}
               onTripClick={(tripId) => setRightPanel({ mode: 'TRIP_DETAILS', tripId })}
             />
-          ) : (
+          )}
+
+          {currentView === 'register' && (
             <div style={{ height: '100%', padding: '30px', overflowY: 'auto' }}>
               <AdminViews activeView="register" />
+            </div>
+          )}
+
+          {currentView === 'downloads' && (
+            <div style={{ height: '100%', overflowY: 'auto' }}>
+              <AppDownloadPage 
+                androidDownloadUrl="/downloads/app-release.apk"
+                iosDownloadUrl="/downloads/app-release.apk"
+              />
             </div>
           )}
         </div>
